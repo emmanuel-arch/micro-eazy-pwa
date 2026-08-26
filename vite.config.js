@@ -17,23 +17,35 @@ export default defineConfig(({ mode }) => {
       react(),
       VitePWA({
         registerType: 'auto',
+        // ── THE APP'S IDENTITY ────────────────────────────────────────────
+        // This used to say "Micromart" and point at the ServiceSuite Cloud
+        // icons, so the installed app announced itself as somebody else's
+        // product with a generic mark. It also lost outright to a second,
+        // hand-written public/manifest.json that index.html linked explicitly —
+        // two manifests, and the wrong one won. That file is gone; this is now
+        // the only manifest, and VitePWA injects the link itself.
         manifest: {
-          short_name: 'Micromart',
-          name: 'Micromart — powered by Micro Eazy',
-          description: 'Apply, track and repay your loan from your phone.',
+          name: 'Micro Eazy',
+          short_name: 'Micro Eazy',
+          description: 'Quick loans. Better living. Apply, track and repay from your phone.',
+          // ── WHY THREE ICONS AND NOT ONE ──────────────────────────────────
+          // "any" is TRANSPARENT — it is what sits in the Windows Start menu
+          // and the macOS dock, and a transparent mark is the difference
+          // between an app and a white sticker on the desktop. "maskable" is
+          // filled, because Android and Chrome crop it to the launcher's own
+          // shape and a transparent one crops to a transparent blob.
+          // Regenerate all of them with `npm run brand:icons`.
           icons: [
-            {
-              src: '/service-suite-cloud-192.png',
-              sizes: '192x192',
-              type: 'image/png',
-            },
-            {
-              src: '/service-suite-cloud-512.png',
-              sizes: '512x512',
-              type: 'image/png',
-            },
+            { src: '/brand/micro-eazy/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+            { src: '/brand/micro-eazy/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+            { src: '/brand/micro-eazy/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
           ],
-          theme_color: '#ffffff',
+          // The title bar in standalone mode. Brand navy, matching --eco-accent,
+          // so the window chrome belongs to the app rather than to the browser.
+          theme_color: '#012863',
+          // The SPLASH, not the icon — it shows for the half second before the
+          // app paints. White because the app's own ground is light; a navy
+          // splash would flash dark and then blink white.
           background_color: '#ffffff',
           display: 'standalone',
           // "?src=pwa" is the only thing that distinguishes an installed launch
