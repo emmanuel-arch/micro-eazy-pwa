@@ -155,7 +155,7 @@ const Loan = ({logout}) => {
             } else {
                 setStkWait(false);
                 setStkPrompted(false);
-                setStkPromptrt(data.message || "Failed to send STK push.");
+                setStkPrompt(data.message || "Failed to send STK push.");
             }
         } catch (err) {
             setStkWait(false);

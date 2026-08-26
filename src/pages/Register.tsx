@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
+import { ENTITY_ID } from '../lib/tenant';
 import { Link, UNSAFE_getPatchRoutesOnNavigationFunction, useNavigate } from "react-router-dom";
 import { type OnboardingSettings }  from "./formsections/OnboardingSettings";
 import { useForm, SubmitHandler, FieldName, set } from 'react-hook-form';
@@ -96,7 +97,7 @@ const Register = ({ setUserSession }) => {
 
     const [showTermsModal, setShowTermsModal] = useState(false);
     
-    const entityId = "3002";
+    const entityId = ENTITY_ID;
 
     const getUserLocation = () => {
         if (!navigator.geolocation) {

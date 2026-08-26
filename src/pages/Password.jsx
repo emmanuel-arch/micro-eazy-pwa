@@ -1,16 +1,17 @@
 import React, { useEffect, useState } from "react";
+import { ENTITY_ID } from '../lib/tenant';
 import { Link, useNavigate } from "react-router-dom";
 import { Swiper, SwiperSlide } from "swiper/react";
 import IntroSlider from '../components/IntroSlider';
 
-const Password = ({ setUserSession }) => {
+const Password = ({ setUserSession, tenant }) => {
     const [isLoading, setIsLoading] = useState(true);
     const [email, setEmail] = useState("");
     const [account, setAccount] = useState("");
     const [password, setPassword] = useState("");
     const navigate = useNavigate();
     const [hidePassword, setHidePassword] = useState(true);
-    const entityId = "3002";
+    const entityId = ENTITY_ID;
     const [loggingIn, setLoggingIn] = useState(false);
     const [reset, setReset] = useState(false);
 
@@ -158,7 +159,7 @@ const Password = ({ setUserSession }) => {
                             </div>
                             <footer className="adminuiux-footer mt-auto">
                                 <div className="container-fluid text-center">
-                                    <span className="small">Copyright @2025, <a href="https://techcrast.co.ke" target="_blank">TechCrast Software Solutions LTD</a></span>
+                                    <span className="small">© {new Date().getFullYear()} {tenant?.name || ''} · Powered by Micro Eazy</span>
                                 </div>
                             </footer>
                         </div>

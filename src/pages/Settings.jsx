@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { ENTITY_ID } from '../lib/tenant';
 import { Link, useNavigate } from "react-router-dom";
 
 function Settings (){
@@ -12,7 +13,7 @@ function Settings (){
     const [hidePassword, setHidePassword] = useState(true);
     const [hideNewPassword, setHideNewPassword] = useState(true);
     const [hideConfirmPassword, setHideConfirmPassword] = useState(true);
-    const entityId = "3002";
+    const entityId = ENTITY_ID;
     const [loggingIn, setLoggingIn] = useState(false);
     const [loginError, setLoginError] = useState("");
     const [loginSuccess, setLoginSuccess] = useState("");

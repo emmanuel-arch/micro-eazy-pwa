@@ -1,0 +1,329 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   THE CRUNCH THEATRE — Safaricom register.
+
+   Ported from connected-suite/src/components/statement/CrunchTheatre.tsx, which
+   is itself lifted from the Hub wallet's "Consolidating your wallet" loader. The
+   visual language is deliberately NOT this app's: the customer is handing over
+   six months of their financial life, and for the ninety seconds that takes, the
+   screen belongs to M-PESA — their backdrop, their green, their mark.
+
+   The staging is theatre. THE NUMBERS ARE REAL. Only the receipt codes that
+   flicker before the server responds are synthetic; everything after the extract
+   stage is the customer's own statement.
+
+   ── WHY CSS AND NOT FRAMER-MOTION ────────────────────────────────────────────
+   The suite version uses framer-motion. This app does not carry it, and adding
+   ~40kB gzipped to a bundle that already ships 200kB — on a phone, in Kenya, on
+   mobile data, before a customer can see their score — is the wrong trade for
+   transitions that keyframes express perfectly well.
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.crunch {
+  --saf-green: #4cb749;
+  --saf-dark: #1e8b3a;
+  --saf-amber: #d97706;
+  --saf-red: #e11d48;
+  --saf-slate: #94a3b8;
+
+  position: fixed;
+  inset: 0;
+  z-index: 1050;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  font-family: "Open Sans", system-ui, sans-serif;
+  color: #fff;
+}
+
+.crunch-bg {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background-image: url("/mpesa/mpesa-background.jpg");
+  background-size: cover;
+  background-position: center;
+}
+/* The backdrop is a busy photograph; without this the white type on it is
+   unreadable at the bottom of the frame where the feed sits. */
+.crunch-bg::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(4, 20, 10, 0.62) 0%, rgba(4, 16, 9, 0.80) 55%, rgba(3, 12, 7, 0.92) 100%);
+}
+
+/* MOBILE FIRST, AND THIS IS THE LINE THAT ENFORCES IT.
+   Without box-sizing the padding below is added OUTSIDE the width, and with a
+   bare `max-width: 34rem` the column sat at a fixed 544px on a 360px handset:
+   the sixth rail segment, the end of every factor line and the right edge of
+   every card were simply off-screen. `min(34rem, 100%)` caps it on a tablet and
+   yields to the viewport on a phone, which is the correct order of priority for
+   a customer app. */
+.crunch,
+.crunch *,
+.crunch *::before,
+.crunch *::after { box-sizing: border-box; }
+
+/* Vertical scrolling makes the horizontal axis a scroll container per spec, so
+   an overflowing child would scroll sideways rather than be caught. Nothing here
+   should ever exceed the viewport; if it does, clip it and it will be obvious. */
+.crunch { overflow-x: hidden; }
+
+.crunch-inner {
+  position: relative;
+  width: 100%;
+  max-width: min(34rem, 100%);
+  margin: 0 auto;
+  padding: 2rem 1.15rem 3rem;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+/* ── The ring ─────────────────────────────────────────────────────────────── */
+
+.saf-loader {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+  height: 132px;
+  width: 132px;
+}
+
+.saf-loader-pulse {
+  position: absolute;
+  inset: 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.15);
+  animation: saf-ping 1.6s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+.saf-loader-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: conic-gradient(
+    from 0deg,
+    rgba(76, 183, 73, 0) 0%,
+    var(--saf-green) 60%,
+    #ffffff 95%,
+    rgba(76, 183, 73, 0) 100%
+  );
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 7px), #000 calc(100% - 7px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 7px), #000 calc(100% - 7px));
+  animation: saf-spin 1.1s linear infinite;
+}
+
+.saf-loader-mark {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.6rem;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 22px 45px -12px rgba(0, 0, 0, 0.55);
+  outline: 1px solid rgba(255, 255, 255, 0.6);
+}
+.saf-loader-mark img { width: 80px; height: auto; border-radius: 8px; object-fit: contain; display: block; }
+
+@keyframes saf-spin { to { transform: rotate(360deg); } }
+@keyframes saf-ping {
+  0%   { transform: scale(1);    opacity: 0.5; }
+  75%, 100% { transform: scale(1.6); opacity: 0; }
+}
+
+/* ── The rail ─────────────────────────────────────────────────────────────── */
+
+.crunch-rail { display: flex; gap: 5px; margin: 1.6rem 0 0.4rem; }
+/* `min-width: 0` because a flex item defaults to `min-width: auto`, which
+   refuses to shrink below its content — six uppercase labels then force the rail
+   wider than a 360px phone. This is the single most common way a flex row
+   overflows on mobile. */
+.crunch-rail-seg { flex: 1 1 0; min-width: 0; }
+.crunch-rail-bar {
+  height: 3px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.18);
+  overflow: hidden;
+}
+.crunch-rail-fill {
+  display: block;
+  height: 100%;
+  width: 0;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--saf-green), #fff);
+}
+.crunch-rail-seg.done .crunch-rail-fill { width: 100%; }
+.crunch-rail-seg.active .crunch-rail-fill { animation: crunch-fill var(--dur, 1000ms) linear forwards; }
+.crunch-rail-label {
+  margin-top: 6px;
+  /* Scales with the viewport so six labels fit a 360px screen without either
+     wrapping or being clipped. */
+  font-size: clamp(7.5px, 2.3vw, 9px);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.42);
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.crunch-rail-seg.done .crunch-rail-label,
+.crunch-rail-seg.active .crunch-rail-label { color: rgba(255, 255, 255, 0.85); }
+
+@keyframes crunch-fill { from { width: 0; } to { width: 100%; } }
+
+/* ── Copy ─────────────────────────────────────────────────────────────────── */
+
+.crunch-head { text-align: center; margin-top: 1.1rem; }
+.crunch-head h1 {
+  font-family: "Lexend", system-ui, sans-serif;
+  font-size: 1.3rem;
+  font-weight: 700;
+  letter-spacing: -0.016em;
+  margin: 0.5rem 0 0;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
+}
+.crunch-head p {
+  margin: 0.35rem 0 0;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.7);
+  min-height: 1.2em;
+}
+
+.crunch-swap { animation: crunch-swap 0.3s cubic-bezier(0.16, 1, 0.3, 1) both; }
+@keyframes crunch-swap { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+/* ── Glass cards ──────────────────────────────────────────────────────────── */
+
+.crunch-card {
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.10);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: 16px;
+  padding: 1rem;
+}
+.crunch-stage { margin-top: 1.4rem; }
+
+/* ── The transaction feed ─────────────────────────────────────────────────── */
+
+.crunch-feed { display: flex; flex-direction: column; gap: 6px; }
+.crunch-feed-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.72rem;
+  padding: 0.45rem 0.6rem;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.22);
+  animation: crunch-feed-in 0.34s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes crunch-feed-in { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: none; } }
+
+.crunch-receipt {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  color: rgba(255, 255, 255, 0.5);
+  letter-spacing: 0.03em;
+  flex: 0 0 auto;
+}
+.crunch-detail {
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: rgba(255, 255, 255, 0.82);
+}
+.crunch-amt { flex: 0 0 auto; font-variant-numeric: tabular-nums; font-weight: 600; }
+.crunch-amt.in { color: var(--saf-green); }
+.crunch-amt.out { color: rgba(255, 255, 255, 0.6); }
+
+/* ── Counters & score ─────────────────────────────────────────────────────── */
+
+.crunch-figs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.6rem; }
+.crunch-fig { text-align: center; }
+.crunch-fig-v {
+  font-family: "Lexend", system-ui, sans-serif;
+  font-size: 1.05rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+.crunch-fig-l {
+  font-size: 0.6rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.5);
+  margin-top: 2px;
+}
+
+.crunch-dial { position: relative; width: 168px; height: 168px; margin: 0 auto; }
+.crunch-dial svg { transform: rotate(-90deg); display: block; }
+.crunch-dial-mid {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.crunch-dial-score {
+  font-family: "Lexend", system-ui, sans-serif;
+  font-size: 2.5rem;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.035em;
+}
+.crunch-dial-max { font-size: 0.65rem; color: rgba(255, 255, 255, 0.5); margin-top: 3px; }
+
+/* ── Factors ──────────────────────────────────────────────────────────────── */
+
+.crunch-factor {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+.crunch-factor:last-child { border-bottom: 0; }
+.crunch-factor-dot {
+  flex: 0 0 auto;
+  width: 7px; height: 7px;
+  border-radius: 999px;
+  margin-top: 6px;
+}
+.crunch-factor-name { font-size: 0.8rem; font-weight: 600; }
+.crunch-factor-detail { font-size: 0.7rem; color: rgba(255, 255, 255, 0.62); line-height: 1.5; margin-top: 1px; }
+.crunch-factor-pts { flex: 0 0 auto; font-size: 0.78rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+/* ── Actions ──────────────────────────────────────────────────────────────── */
+
+.crunch-actions { display: flex; flex-direction: column; gap: 0.6rem; margin-top: 1.4rem; }
+.crunch-btn {
+  display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+  width: 100%; min-height: 50px;
+  border: 0; border-radius: 14px;
+  background: linear-gradient(180deg, var(--saf-green), var(--saf-dark));
+  color: #fff;
+  font-family: "Lexend", system-ui, sans-serif;
+  font-size: 0.9rem; font-weight: 600;
+  cursor: pointer;
+}
+.crunch-btn:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+.crunch-btn-quiet {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: rgba(255, 255, 255, 0.8);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .saf-loader-ring { animation-duration: 3s; }
+  .saf-loader-pulse { animation: none; }
+  .crunch-swap, .crunch-feed-row { animation: none; }
+  .crunch-rail-seg.active .crunch-rail-fill { width: 100%; animation: none; }
+}

@@ -106,7 +106,11 @@ const LoanApplication = ({logout}) => {
                     },
                     body: JSON.stringify({
                         PhoneNumber: `${sessionData.userId}`,
-                        EntityId: parseInt(sessionData.userId),
+                        // Was `parseInt(sessionData.userId)` — the BORROWER's id
+                        // in the entity field, so the product list was scoped to
+                        // an entity that does not exist. The entity comes from
+                        // configuration (3005, MICROMART FINTECH).
+                        EntityId: parseInt(configurationDataJson.EntityId),
                         RequestFlag: 0,
                     }),
                 });

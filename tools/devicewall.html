@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Device wall</title>
+<style>
+  :root { --bg:#14161a; --ink:#e8eaed; --mute:#8b93a1; --line:#2a2e36; }
+  * { box-sizing: border-box; }
+  body {
+    margin:0; background:var(--bg); color:var(--ink);
+    font:13px/1.5 ui-monospace, "SF Mono", Menlo, monospace;
+    padding: 18px;
+  }
+  h1 { font-size:14px; margin:0 0 4px; font-weight:600; letter-spacing:.02em; }
+  p.sub { margin:0 0 16px; color:var(--mute); font-size:12px; max-width:80ch; }
+  .bar { display:flex; gap:8px; align-items:center; margin-bottom:18px; flex-wrap:wrap; }
+  input, button {
+    font:inherit; background:#1c1f26; color:var(--ink);
+    border:1px solid var(--line); border-radius:7px; padding:7px 10px;
+  }
+  input { min-width:min(30rem,60vw); }
+  button { cursor:pointer; }
+  button:hover { border-color:#3d434e; }
+  .wall { display:flex; gap:18px; align-items:flex-start; overflow-x:auto; padding-bottom:14px; }
+  .dev { flex:0 0 auto; }
+  .dev header {
+    display:flex; justify-content:space-between; align-items:baseline;
+    color:var(--mute); font-size:11px; margin-bottom:6px; padding:0 2px;
+  }
+  .dev header b { color:var(--ink); font-weight:600; }
+  iframe {
+    display:block; border:1px solid var(--line); border-radius:12px;
+    background:#fff; box-shadow:0 12px 40px -18px rgba(0,0,0,.9);
+  }
+</style>
+</head>
+<body>
+  <h1>Device wall</h1>
+  <p class="sub">
+    The same route at four real viewport widths, at once. Each frame is a genuine
+    browsing context, so <code>innerWidth</code>, media queries, <code>dvh</code>
+    and <code>clamp()</code> all resolve the way they will on the device — which
+    is <em>not</em> true of headless <code>--window-size</code>, which lays out at
+    a default width and crops the screenshot to the size you asked for. That
+    discrepancy is what makes a layout look broken on a phone when it is not, and
+    look fine when it is broken.
+  </p>
+
+  <div class="bar">
+    <label for="u">URL</label>
+    <input id="u" value="http://localhost:4201/preview/screen?s=consent">
+    <button onclick="go()">Load</button>
+    <button onclick="document.querySelectorAll('iframe').forEach(f=>f.contentWindow.location.reload())">Reload all</button>
+  </div>
+
+  <div class="wall" id="wall"></div>
+
+<script>
+  // 360 is the narrow Android floor the house rule targets; 414 a large iPhone;
+  // 768 a tablet in portrait; 1024 the smallest thing that reads as desktop.
+  const DEVICES = [
+    { w: 360, h: 780, name: 'Android' },
+    { w: 414, h: 896, name: 'iPhone' },
+    { w: 768, h: 900, name: 'Tablet' },
+    { w: 1024, h: 900, name: 'Desktop' },
+  ];
+
+  function go() {
+    const url = document.getElementById('u').value;
+    const wall = document.getElementById('wall');
+    wall.innerHTML = '';
+    for (const d of DEVICES) {
+      const box = document.createElement('div');
+      box.className = 'dev';
+      box.innerHTML =
+        `<header><b>${d.name}</b><span>${d.w}×${d.h}</span></header>` +
+        `<iframe src="${url}" width="${d.w}" height="${d.h}" loading="eager"></iframe>`;
+      wall.appendChild(box);
+    }
+  }
+  go();
+</script>
+</body>
+</html>

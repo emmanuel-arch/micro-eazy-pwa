@@ -1,16 +1,17 @@
 import React, { useEffect, useState } from "react";
+import { ENTITY_ID } from '../lib/tenant';
 import { Link, useNavigate } from "react-router-dom";
 import { Swiper, SwiperSlide } from "swiper/react";
 import IntroSlider from '../components/IntroSlider';
 
-const Login = ({ setUserSession }) => {
+const Login = ({ setUserSession, tenant }) => {
     const [isLoading, setIsLoading] = useState(true);
     const [email, setEmail] = useState("");
     const [account, setAccount] = useState("");
     const [password, setPassword] = useState("");
     const navigate = useNavigate();
     const [hidePassword, setHidePassword] = useState(true);
-    const entityId = "3002";
+    const entityId = ENTITY_ID;
     const [loggingIn, setLoggingIn] = useState(false);
     const [loginError, setLoginError] = useState("");
 
@@ -106,8 +107,8 @@ const Login = ({ setUserSession }) => {
                         <div className="col-12 mb-auto pt-4" />
                         <div className="col-auto">
                             <img src="icon.png" alt="Service Suite Cloud" className="height-60 mb-3" />
-                            <p className="h6 mb-0">MICROMART AFRICA LTD</p>
-                            <p className="h3 mb-4">Exceeding The Incredible</p>
+                            <p className="h6 mb-0">{(tenant?.name || '').toUpperCase()}</p>
+                            <p className="h3 mb-4">{tenant?.tagline || ''}</p>
                             <div className="loader10 mb-2 mx-auto" />
                         </div>
                         <div className="col-12 mt-auto pb-4">
@@ -130,8 +131,8 @@ const Login = ({ setUserSession }) => {
                                             <img data-bs-img="light" src="icon.png" alt="Service Suite Cloud" /> 
                                             <img data-bs-img="dark" src="icon_light.png" alt="Service Suite Cloud" />
                                             <div>
-                                                <span className="h4">Micromart <b>Africa</b> LTD</span>
-                                                <p className="company-tagline">Exceeding The Incredible</p>
+                                                <span className="h4">{tenant?.name || ''}</span>
+                                                <p className="company-tagline">{tenant?.tagline || ''}</p>
                                             </div>
                                         </a>
                                         <div className="ms-auto" />
@@ -181,12 +182,12 @@ const Login = ({ setUserSession }) => {
                             </div>
                             <footer className="adminuiux-footer mt-auto">
                                 <div className="container-fluid text-center">
-                                    <span className="small">Copyright @2025, <a href="https://techcrast.co.ke" target="_blank">TechCrast Software Solutions LTD</a></span>
+                                    <span className="small">© {new Date().getFullYear()} {tenant?.name || ''} · Powered by Micro Eazy</span>
                                 </div>
                             </footer>
                         </div>
                         <div className="col-12 col-md-6 col-xl-8 p-4 d-none d-md-block">
-                            <IntroSlider/>
+                            <IntroSlider tenant={tenant} />
                         </div>
                     </div>
                 </div>
