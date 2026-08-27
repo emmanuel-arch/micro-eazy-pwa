@@ -1,10 +1,17 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // THE APEX DOOR — the first screen in the ecosystem.
 //
-// A customer arriving at microeazy.servicesuitecloud.com meets MICRO EAZY here:
+// A customer arriving at portal.servicesuitecloud.com meets MICRO EAZY here:
 // the name, the promise, the three commitments, and the install. One tap later
 // they are in their own lender's app, in their own lender's colours. Ecosystem
 // first, lender second — the same order the staff side uses.
+//
+// THE HOST IS portal., NOT microeazy. microeazy.servicesuitecloud.com belongs to
+// the Connected Suite deployment, whose /microeazy route is the install door for
+// the SAME app. Pointing both at this project is not a duplicate — it is a
+// contest for one hostname that only one Vercel project can hold, and the loser
+// serves DEPLOYMENT_NOT_FOUND on a domain customers already have installed. See
+// ecosystem/registry.json → pwa.deploy and DEPLOY.md.
 //
 // ── THE BUG THIS SCREEN REPLACES ─────────────────────────────────────────────
 // The previous landing page (connected-suite, InstallDoor.tsx) rendered its call

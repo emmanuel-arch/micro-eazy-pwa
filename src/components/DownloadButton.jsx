@@ -38,7 +38,9 @@ const DownloadButton = () => {
 
   return (
     <div
-        className="alert alert-success d-flex align-items-center mb-0"
+        // eazy-install-banner is a HOOK, not a style: immersive screens hide it
+        // by that name. See body.eazy-immersive in components/eco/cinema.css.
+        className="alert alert-success d-flex align-items-center mb-0 eazy-install-banner"
         role="alert"
         style={{
           position: 'fixed',

@@ -80,3 +80,53 @@ immutable by construction and Vercel already caches them correctly.
    This is the step that was missing. A green `git push` says nothing about
    whether the deployment built.
 4. Hard-reload the live URL and check the app version actually changed.
+
+---
+
+## The domain
+
+| Host | Project | State on 2026-08-27 |
+|---|---|---|
+| `portal.servicesuitecloud.com` | **this one** (the PWA) | **no DNS record yet** |
+| `micro-eazy-pwa.vercel.app` | this one | live — what customers reach today |
+| `microeazy.servicesuitecloud.com` | the **Connected Suite** | `DEPLOYMENT_NOT_FOUND` |
+| `lms.servicesuitecloud.com` | the Connected Suite | live, and what `/api/*` proxies to |
+| `app.servicesuitecloud.com` | legacy IIS (45.150.188.26) | not ours to take |
+
+**`portal` and `microeazy` are two different labels on purpose.** Only one Vercel
+project can hold a hostname. Pointing both projects at `microeazy.` does not
+give you two apps on one domain — it gives you a contest, and the loser answers
+`DEPLOYMENT_NOT_FOUND` on a host that customers already have on their home
+screens. `microeazy.` is the Suite's (its `/microeazy` route is the install
+door); `portal.` is this project's.
+
+Both labels are reserved in `connected-suite/src/lib/suite/hosts.ts`, so no
+lender signing up can ever be issued either as their subdomain slug.
+
+### To put this app on `portal.servicesuitecloud.com`
+
+1. DNS: `portal` → `CNAME cname.vercel-dns.com` (the sibling records already
+   resolve to `b019df9cc932fcfc.vercel-dns-017.com`, so the zone is on Vercel).
+2. Vercel → this project → Settings → Domains → add `portal.servicesuitecloud.com`.
+3. Nothing in the code changes. `start_url`, `scope` and the `/api` rewrite are
+   all origin-relative, so the app is already host-agnostic — which is why it
+   runs correctly on `micro-eazy-pwa.vercel.app` today.
+4. Separately, re-attach `microeazy.servicesuitecloud.com` to the **Suite**
+   project. It is listed as CANONICAL in `ecosystem/registry.json` and is
+   currently serving nothing.
+
+---
+
+## The login panel's photography
+
+`public/images/login/*.webp` is generated from the committed sources in
+`art/login/` by `npm run art:login`. **Both are tracked** — the PNGs so the
+encode can be redone, the WebP so a deploy does not depend on anyone remembering
+to run a script.
+
+The failure mode is quiet, so it is worth knowing: because rule 2 above answers
+any unmatched path with `index.html` at HTTP **200**, a missing plate does not
+404. It arrives as an HTML document, fails to decode, and `IntroSlider` falls
+back to the tenant gradient. The panel then looks *deliberately* plain, which is
+indistinguishable from art that never shipped. `curl -I` will not tell you either
+— check the `content-type`.

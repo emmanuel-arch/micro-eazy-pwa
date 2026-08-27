@@ -6,8 +6,8 @@
 // know which lender they belong to does the app repaint in that lender's colours
 // and carry their name for the rest of the session.
 //
-// It is the same move the staff side already makes — microeazy.servicesuitecloud
-// .com/login shows the ecosystem, then hands the person to their own branded
+// It is the same move the staff side already makes — lms.servicesuitecloud.com
+// /login shows the ecosystem, then hands the person to their own branded
 // console — and it exists for the same reason. The ecosystem is what is being
 // sold; the lender is who the customer actually banks with. Showing only the
 // second makes this look like one company's app. Showing only the first makes a

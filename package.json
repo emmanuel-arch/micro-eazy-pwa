@@ -8,7 +8,8 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "brand:icons": "node scripts/brand-icons.mjs"
+    "brand:icons": "node scripts/brand-icons.mjs",
+    "art:login": "node scripts/login-art.mjs"
   },
   "dependencies": {
     "bootstrap": "^5.3.3",

@@ -12,6 +12,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import Waiting from './EazyLoader';
 import './eco.css';
 
 /* ── Formatting ──────────────────────────────────────────────────────────── */
@@ -194,23 +195,22 @@ export function State({ icon: I = Icon.alert, title, note, action, delay = 0 }) 
   );
 }
 
-/** The skeleton shown while a screen's first read is in flight. */
-export function Loading({ rows = 3 }) {
+/**
+ * The wait shown while a screen's first read is in flight.
+ *
+ * This was a grey skeleton — three bars sized to look like the copy that was
+ * coming. It was replaced because the app now has ONE waiting state, the ring
+ * from the Crunch Theatre, and seven screens quietly using a different one is
+ * how an app stops feeling like a single product. See components/eco/loader.css.
+ *
+ * `rows` is still accepted and still ignored. Seven call sites pass it, it was
+ * never anything but the skeleton's height, and changing them all to prove a
+ * point would be a worse diff than one documented no-op.
+ */
+export function Loading() {
   return (
     <section className="eco-card" aria-busy="true" aria-live="polite">
-      <span className="visually-hidden" style={{ position: 'absolute', left: -9999 }}>Loading</span>
-      {Array.from({ length: rows }).map((_, i) => (
-        <div
-          key={i}
-          style={{
-            height: 12,
-            borderRadius: 6,
-            background: 'rgba(18,21,27,0.07)',
-            marginBottom: i === rows - 1 ? 0 : 14,
-            width: `${100 - i * 14}%`,
-          }}
-        />
-      ))}
+      <Waiting title="Loading" note="Reading your file…" size="md" />
     </section>
   );
 }

@@ -1,0 +1,228 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   THE RING — one waiting state for the whole app.
+
+   Lifted from the Crunch Theatre's loader (crunch.css → .saf-loader), which was
+   the only screen in this app that looked like a fintech product while it
+   worked. It was also the only screen anybody ever pointed at, which is the
+   tell: the rest of the app spent its waiting time showing an admin template's
+   three bouncing dots.
+
+   ── WHAT CHANGED IN THE PORT ────────────────────────────────────────────────
+   The Crunch version is Safaricom's — their green, their mark — and it should
+   stay that way. For the ninety seconds it takes to read an M-PESA statement the
+   screen genuinely belongs to M-PESA, and saying so is honest rather than
+   decorative. Everywhere ELSE in this app the wait belongs to Micro Eazy, so
+   this copy is built from the tenant's own tokens: the sweep runs the lender's
+   primary into Micro Eazy lime, and the chip in the middle carries the app icon.
+
+   A lender who has not configured their colours falls back to Micro Eazy navy,
+   because --tenant-primary is written by applyTenantTheme() and may not have
+   landed yet on the first frame. See src/lib/tenant.js.
+
+   ── WHY IT RE-SKINS .loader10 AND .loader1 RATHER THAN REPLACING THEM ───────
+   Those two classes are the adminuiux template's spinners and they appear in
+   about twenty places across Ledger, Loan, Loans, LoanApplication, Password,
+   Register, Dashboard and the two page loaders. Editing every call site would
+   mean touching every one of those files, and would miss any screen added
+   later that reaches for the template's class out of habit.
+
+   So the classes are re-skinned in place, at `body` specificity so this wins
+   over app.css whatever order the bundler emits. One stylesheet, every waiting
+   state in the product, including the ones nobody has written yet.
+
+   Both template spinners are built from ::before/::after — the classic
+   three-dot bounce — so the pseudos are repurposed rather than hidden: ::before
+   becomes the pulse, ::after the sweep. Leaving them animating underneath is how
+   you get a ring with a dot orbiting inside it.
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.eazy-ring {
+  --ring-size: 132px;
+  --ring-thick: 7px;
+  /* The sweep. Tenant primary → Micro Eazy lime, with a white hot spot at the
+     head of the arc so the rotation reads at a glance rather than being a
+     uniform band that could be still. */
+  --ring-a: var(--tenant-primary, #012863);
+  --ring-b: var(--eazy-lime, #77c60b);
+
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: var(--ring-size);
+  height: var(--ring-size);
+  margin: 0 auto;
+  flex: 0 0 auto;
+}
+
+/* The pulse. Sits UNDER the sweep and scales out of it. */
+.eazy-ring::before {
+  content: "";
+  position: absolute;
+  inset: 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--ring-b) 26%, transparent);
+  animation: eazy-ping 1.6s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+.eazy-ring-track {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0%,
+    var(--ring-a) 42%,
+    var(--ring-b) 78%,
+    #ffffff 94%,
+    transparent 100%
+  );
+  /* The mask is what turns a filled disc into a ring. Both prefixes: iOS Safari
+     did not un-prefix this until 15.4 and this app targets Kenyan handsets, a
+     population with a long tail of older WebKit. */
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - var(--ring-thick)), #000 calc(100% - var(--ring-thick)));
+  mask: radial-gradient(farthest-side, transparent calc(100% - var(--ring-thick)), #000 calc(100% - var(--ring-thick)));
+  animation: eazy-spin 1.1s linear infinite;
+}
+
+.eazy-ring-mark {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  padding: 0.55rem;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 22px 45px -12px rgba(0, 0, 0, 0.45);
+  outline: 1px solid rgba(255, 255, 255, 0.6);
+}
+.eazy-ring-mark img {
+  display: block;
+  width: calc(var(--ring-size) * 0.42);
+  height: auto;
+  border-radius: 10px;
+  object-fit: contain;
+}
+
+/* Sizes. `sm` drops the chip entirely — at 28px the icon is unreadable and the
+   ring alone is the clearer signal. */
+.eazy-ring-sm { --ring-size: 28px; --ring-thick: 3px; }
+.eazy-ring-sm .eazy-ring-mark { display: none; }
+.eazy-ring-sm::before { animation: none; }
+.eazy-ring-md { --ring-size: 74px; --ring-thick: 5px; }
+.eazy-ring-lg { --ring-size: 132px; --ring-thick: 7px; }
+
+@keyframes eazy-spin { to { transform: rotate(360deg); } }
+@keyframes eazy-ping {
+  0%        { transform: scale(1);   opacity: 0.45; }
+  75%, 100% { transform: scale(1.6); opacity: 0; }
+}
+
+/* ── The waiting block ────────────────────────────────────────────────────── */
+
+.eazy-wait {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.1rem;
+  padding: 2.5rem 1rem;
+  text-align: center;
+}
+.eazy-wait-title {
+  font-family: "Lexend", system-ui, sans-serif;
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin: 0;
+  color: inherit;
+}
+.eazy-wait-note {
+  margin: 0.3rem 0 0;
+  font-size: 0.78rem;
+  line-height: 1.55;
+  opacity: 0.66;
+  max-width: 22rem;
+}
+
+/* Full-screen. Used where a wait blocks the whole screen rather than one card —
+   sign-in, first paint, a bureau pull. */
+.eazy-wait-full {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(255, 255, 255, 0.86);
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+  animation: eazy-fade 0.22s ease both;
+}
+/* On a cinematic (dark) screen the white scrim would be a flashbang. */
+.eazy-wait-full.on-dark {
+  background: rgba(2, 8, 24, 0.78);
+  color: #fff;
+}
+@keyframes eazy-fade { from { opacity: 0; } to { opacity: 1; } }
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   THE RE-SKIN. Everything below exists so no call site has to change.
+   ───────────────────────────────────────────────────────────────────────────── */
+
+body .loader10,
+body .loader1 {
+  /* The template sizes .loader10 in em off a 7px font-size and hides its own
+     text with a huge negative indent. Both are reset here or the ring inherits
+     a 7px box and the label reappears as the element grows. */
+  all: unset;
+  display: block;
+  position: relative;
+  box-sizing: border-box;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  /* Inherited by the pseudos below, so one value drives both. */
+  --ring-a: var(--tenant-primary, #012863);
+  --ring-b: var(--eazy-lime, #77c60b);
+}
+
+/* ::after is the sweep — the ring itself. */
+body .loader10::after,
+body .loader1::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0%,
+    var(--ring-a) 42%,
+    var(--ring-b) 78%,
+    #ffffff 94%,
+    transparent 100%
+  );
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 4px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 4px));
+  animation: eazy-spin 1.1s linear infinite;
+}
+
+/* ::before is the pulse. */
+body .loader10::before,
+body .loader1::before {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--ring-b) 24%, transparent);
+  animation: eazy-ping 1.6s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+/* The template's full-screen scrim is kept — only what sits on it changes. */
+body .pageloader { background-color: rgba(255, 255, 255, 0.88); }
+
+@media (prefers-reduced-motion: reduce) {
+  .eazy-ring-track,
+  body .loader10::after,
+  body .loader1::after { animation-duration: 3s; }
+  .eazy-ring::before,
+  body .loader10::before,
+  body .loader1::before { animation: none; opacity: 0.28; }
+  .eazy-wait-full { animation: none; }
+}

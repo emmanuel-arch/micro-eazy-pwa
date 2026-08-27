@@ -98,6 +98,12 @@ const SideBar = ({ logout }) => {
             </Link>
           </li>
           <li className="nav-item">
+            <Link to="/credit-report" className="nav-link" onClick={handleLinkClick}>
+              <i className="menu-icon bi bi-file-earmark-text" />{" "}
+              <span className="menu-name">Get a CRB report</span>
+            </Link>
+          </li>
+          <li className="nav-item">
             <Link to="/credit-file" className="nav-link" onClick={handleLinkClick}>
               <i className="menu-icon bi bi-clipboard-data" />{" "}
               <span className="menu-name">Your credit file</span>

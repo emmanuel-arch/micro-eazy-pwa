@@ -1,0 +1,522 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   THE CINEMATIC LAYER — screens that sell something.
+
+   The `.eco-` layer (eco.css) is a white field: right for the seven screens
+   where a customer is told a fact about their own money and needs to read
+   carefully. This is its opposite number — a dark, lit, glass-on-navy register
+   for the screens where the app is OFFERING something and has about two seconds
+   to look like it is worth paying for.
+
+   The vocabulary is the Crunch Theatre's, because that is the one screen in this
+   app that already reads as a product rather than as a template: a photographic
+   ground under a heavy gradient, glass cards at 10% white with a 15% border, and
+   the ring. What changes is the palette — Micro Eazy navy and lime, taken from
+   the mark, rather than Safaricom green.
+
+   ── WHY NOT SAFARICOM'S GREEN, GIVEN THE REFERENCE ──────────────────────────
+   The pattern is worth copying: full-bleed art, one product per card, one
+   confident price, no second call to action competing with the first. The BRAND
+   is not. A borrower app wearing another company's colours on the screen where
+   it asks for money reads as that company's endorsement, and Micro Eazy's own
+   mark is the stronger asset on a screen about the customer's credit file.
+   The Crunch Theatre stays Safaricom green — there the screen genuinely is
+   reading an M-PESA statement and saying so is honest. Here it is not.
+   ───────────────────────────────────────────────────────────────────────────── */
+
+/* ── The palette ──────────────────────────────────────────────────────────
+   On BOTH selectors deliberately. The refusal sheet is rendered as a sibling of
+   .cine rather than inside it — it has to cover the whole screen, including the
+   sticky bar — so a token declared only on .cine is invisible to it. That is not
+   a hypothetical: the sheet shipped once with every --cine-* unresolved, which
+   put the app's dark body ink on a navy panel and made the one sentence the
+   screen exists to say almost unreadable. */
+.cine,
+.cine-scrim {
+  --cine-navy: #012863;
+  --cine-deep: #00043a;
+  --cine-lime: #77c60b;
+  --cine-green: #25950c;
+  --cine-ink: rgba(255, 255, 255, 0.92);
+  --cine-ink-2: rgba(255, 255, 255, 0.68);
+  --cine-ink-3: rgba(255, 255, 255, 0.44);
+  --cine-glass: rgba(255, 255, 255, 0.085);
+  --cine-glass-line: rgba(255, 255, 255, 0.155);
+  color: var(--cine-ink);
+}
+
+.cine {
+  position: relative;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  font-family: "Open Sans", system-ui, sans-serif;
+  background: linear-gradient(168deg, var(--cine-navy) 0%, var(--cine-deep) 62%, #000228 100%);
+}
+
+/* Same discipline as the other two layers: padding stays inside the box, and
+   nothing is allowed to push the right edge off a 360px handset. */
+.cine,
+.cine *,
+.cine *::before,
+.cine *::after { box-sizing: border-box; }
+
+/* ── The ground ───────────────────────────────────────────────────────────── */
+
+/* Two blooms, felt rather than seen. `fixed` so the light stays put while the
+   content travels over it — that is what makes it read as depth instead of as a
+   gradient that scrolls. */
+.cine-glow {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+.cine-glow::before,
+.cine-glow::after {
+  content: "";
+  position: absolute;
+  border-radius: 999px;
+  filter: blur(64px);
+}
+.cine-glow::before {
+  top: -26%;
+  right: -30%;
+  width: 86vw;
+  height: 86vw;
+  background: radial-gradient(circle, color-mix(in srgb, var(--cine-lime) 26%, transparent) 0%, transparent 68%);
+  animation: cine-drift 14s ease-in-out infinite alternate;
+}
+.cine-glow::after {
+  bottom: -30%;
+  left: -34%;
+  width: 92vw;
+  height: 92vw;
+  background: radial-gradient(circle, color-mix(in srgb, var(--cine-green) 22%, transparent) 0%, transparent 70%);
+  animation: cine-drift 18s ease-in-out -6s infinite alternate-reverse;
+}
+@keyframes cine-drift {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to   { transform: translate3d(2%, 3%, 0) scale(1.08); }
+}
+
+/* Grain. The one layer nobody notices and everybody would notice the absence
+   of — it is what stops a large, smooth navy gradient from banding into visible
+   steps on a cheap panel, which is most of the panels this app runs on. */
+.cine-grain {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.05;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+.cine-content {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: min(34rem, 100%);
+  margin: 0 auto;
+  /* The bottom pad clears the sticky bar AND the home indicator. Without the
+     env() a phone with a gesture bar hides the last card behind it. */
+  padding: max(1rem, env(safe-area-inset-top)) 1.1rem calc(7.5rem + env(safe-area-inset-bottom));
+}
+
+/* ── Header ───────────────────────────────────────────────────────────────── */
+
+.cine-head {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.4rem 0 1.5rem;
+}
+.cine-back {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  border: 1px solid var(--cine-glass-line);
+  border-radius: 14px;
+  background: var(--cine-glass);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  color: var(--cine-ink);
+  cursor: pointer;
+  transition: background 0.18s ease, border-color 0.18s ease;
+}
+.cine-back:hover { background: rgba(255, 255, 255, 0.14); }
+.cine-back:focus-visible { outline: 2px solid var(--cine-lime); outline-offset: 2px; }
+
+.cine-eyebrow {
+  margin: 0;
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.19em;
+  text-transform: uppercase;
+  color: var(--cine-lime);
+}
+.cine-title {
+  margin: 0.15rem 0 0;
+  font-family: "Lexend", system-ui, sans-serif;
+  font-size: 1.3rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+
+/* ── The hero ─────────────────────────────────────────────────────────────── */
+
+.cine-hero { text-align: center; padding: 0.5rem 0 0.4rem; }
+
+.cine-art {
+  display: block;
+  width: min(280px, 74%);
+  height: auto;
+  margin: 0 auto;
+  /* The drop shadow is on the SVG rather than a wrapper so it follows the
+     artwork's own silhouette instead of boxing it. */
+  filter: drop-shadow(0 28px 46px rgba(0, 0, 0, 0.5));
+  animation: cine-float 7s ease-in-out infinite alternate;
+}
+@keyframes cine-float {
+  from { transform: translateY(-5px); }
+  to   { transform: translateY(6px); }
+}
+
+.cine-hero-title {
+  font-family: "Lexend", system-ui, sans-serif;
+  font-size: clamp(1.6rem, 7vw, 2.1rem);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.08;
+  margin: 1.5rem 0 0;
+  text-wrap: balance;
+}
+.cine-hero-sub {
+  margin: 0.7rem auto 0;
+  max-width: 26rem;
+  font-size: 0.88rem;
+  line-height: 1.65;
+  color: var(--cine-ink-2);
+  text-wrap: pretty;
+}
+
+/* ── Glass cards ──────────────────────────────────────────────────────────── */
+
+.cine-section-label {
+  margin: 2.1rem 0 0.85rem;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--cine-ink-3);
+}
+
+.cine-card {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.9rem;
+  width: 100%;
+  padding: 1rem;
+  border: 1px solid var(--cine-glass-line);
+  border-radius: 18px;
+  background: var(--cine-glass);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  color: inherit;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  overflow: hidden;
+  transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1),
+              background 0.18s ease,
+              border-color 0.18s ease;
+  animation: cine-rise 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: var(--d, 0ms);
+}
+.cine-card + .cine-card { margin-top: 0.7rem; }
+.cine-card:hover { background: rgba(255, 255, 255, 0.13); border-color: rgba(255, 255, 255, 0.26); }
+.cine-card:active { transform: scale(0.988); }
+.cine-card:focus-visible { outline: 2px solid var(--cine-lime); outline-offset: 3px; }
+
+/* The specular edge — a single hairline of light along the top of the glass.
+   It is the whole difference between "a translucent rectangle" and "glass". */
+.cine-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.42), transparent);
+}
+
+/* The featured one carries the price, so it gets the lime edge and a lift. */
+.cine-card-featured {
+  border-color: color-mix(in srgb, var(--cine-lime) 42%, transparent);
+  background: linear-gradient(
+    150deg,
+    color-mix(in srgb, var(--cine-lime) 13%, transparent) 0%,
+    var(--cine-glass) 58%
+  );
+  box-shadow: 0 18px 44px -18px color-mix(in srgb, var(--cine-green) 62%, transparent);
+}
+.cine-card-featured::before { background: linear-gradient(90deg, transparent, var(--cine-lime), transparent); }
+
+@keyframes cine-rise {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: none; }
+}
+
+.cine-card-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.11);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: var(--cine-lime);
+}
+.cine-card-featured .cine-card-icon {
+  background: linear-gradient(140deg, var(--cine-lime), var(--cine-green));
+  border-color: transparent;
+  color: var(--cine-navy);
+}
+
+.cine-card-body { flex: 1 1 auto; min-width: 0; }
+/* display:block on all three. A <button> may only contain phrasing content, so
+   these are spans rather than <p>/<div> — which means they are inline until told
+   otherwise, and the name and the note render on one run-together line. */
+.cine-card-name {
+  display: block;
+  margin: 0;
+  font-family: "Lexend", system-ui, sans-serif;
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: -0.012em;
+}
+.cine-card-note {
+  display: block;
+  margin: 0.22rem 0 0;
+  font-size: 0.775rem;
+  line-height: 1.5;
+  color: var(--cine-ink-2);
+  text-wrap: pretty;
+}
+
+.cine-card-tail {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex: 0 0 auto;
+  /* Optically centred against the NAME rather than the whole card, because the
+     note below it is what makes the card tall and the eye reads the top line. */
+  padding-top: 0.55rem;
+  align-self: flex-start;
+}
+.cine-price {
+  font-family: "Lexend", system-ui, sans-serif;
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--cine-lime);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.cine-soon {
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  color: var(--cine-ink-3);
+  border: 1px solid var(--cine-glass-line);
+  border-radius: 999px;
+  padding: 0.2rem 0.5rem;
+  white-space: nowrap;
+}
+.cine-chev { color: var(--cine-ink-3); }
+
+/* ── What it gives you ────────────────────────────────────────────────────── */
+
+.cine-panel {
+  padding: 1.15rem;
+  border: 1px solid var(--cine-glass-line);
+  border-radius: 18px;
+  background: var(--cine-glass);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  animation: cine-rise 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: var(--d, 0ms);
+}
+.cine-yield { display: flex; align-items: flex-start; gap: 0.65rem; padding: 0.42rem 0; }
+/* Optically centred on the FIRST line of the text, not on the flex line box —
+   a two-line yield would otherwise pull the dot to the middle of the pair. */
+.cine-yield-dot {
+  display: flex;
+  flex: 0 0 auto;
+  height: 1.22rem;
+  align-items: center;
+  color: var(--cine-lime);
+}
+.cine-yield-text { font-size: 0.815rem; line-height: 1.5; color: var(--cine-ink-2); }
+
+/* ── The bar ──────────────────────────────────────────────────────────────── */
+
+/* Sticky rather than fixed: it sits at the bottom of the viewport while there is
+   content behind it, and comes to rest at the end of the document instead of
+   hovering over the last card forever. */
+.cine-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 5;
+  padding: 0.9rem 1.1rem calc(0.9rem + env(safe-area-inset-bottom));
+  background: linear-gradient(180deg, rgba(0, 4, 40, 0) 0%, rgba(0, 4, 40, 0.82) 34%, rgba(0, 2, 30, 0.97) 100%);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+.cine-bar-inner { width: 100%; max-width: min(34rem, 100%); margin: 0 auto; }
+
+.cine-cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  width: 100%;
+  min-height: 54px;
+  padding: 0 1.4rem;
+  border: 0;
+  border-radius: 16px;
+  /* Lime fill, NAVY text. The house rule from brand.ts: the green is 3.90:1 on
+     white and fails AA as a bed for white type; navy on lime is 6.65:1. */
+  background: linear-gradient(135deg, var(--cine-lime) 0%, var(--cine-green) 100%);
+  color: var(--cine-navy);
+  font-family: "Lexend", system-ui, sans-serif;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  box-shadow: 0 16px 36px -12px color-mix(in srgb, var(--cine-green) 78%, transparent);
+  transition: transform 0.16s ease, filter 0.16s ease;
+}
+.cine-cta:hover { filter: brightness(1.06); }
+.cine-cta:active { transform: translateY(1px) scale(0.995); }
+.cine-cta:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+.cine-cta:disabled { opacity: 0.55; cursor: not-allowed; box-shadow: none; }
+
+.cine-bar-note {
+  margin: 0.6rem 0 0;
+  text-align: center;
+  font-size: 0.68rem;
+  color: var(--cine-ink-3);
+}
+
+/* ── The refusal sheet ────────────────────────────────────────────────────── */
+
+.cine-scrim,
+.cine-scrim * { box-sizing: border-box; }
+
+.cine-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgba(0, 2, 20, 0.62);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  animation: cine-fade 0.2s ease both;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+@keyframes cine-fade { from { opacity: 0; } to { opacity: 1; } }
+
+.cine-sheet {
+  width: 100%;
+  max-width: min(34rem, 100%);
+  padding: 1.4rem 1.25rem calc(1.5rem + env(safe-area-inset-bottom));
+  border: 1px solid var(--cine-glass-line);
+  border-bottom: 0;
+  border-radius: 26px 26px 0 0;
+  background: linear-gradient(170deg, #06214d 0%, #01103a 100%);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+  box-shadow: 0 -24px 60px rgba(0, 0, 0, 0.55);
+  animation: cine-sheet-up 0.32s cubic-bezier(0.16, 1, 0.3, 1) both;
+  text-align: center;
+}
+@keyframes cine-sheet-up { from { transform: translateY(100%); } to { transform: none; } }
+
+.cine-grip {
+  width: 42px;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.24);
+  margin: 0 auto 1.1rem;
+}
+.cine-sheet-icon {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 0.9rem;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.09);
+  border: 1px solid var(--cine-glass-line);
+  color: var(--cine-lime);
+}
+.cine-sheet-title {
+  margin: 0;
+  font-family: "Lexend", system-ui, sans-serif;
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.cine-sheet-note {
+  margin: 0.55rem auto 0;
+  max-width: 24rem;
+  font-size: 0.82rem;
+  line-height: 1.6;
+  color: var(--cine-ink-2);
+}
+.cine-sheet-actions { margin-top: 1.3rem; display: flex; flex-direction: column; gap: 0.6rem; }
+.cine-btn-quiet {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 48px;
+  border-radius: 14px;
+  border: 1px solid var(--cine-glass-line);
+  background: transparent;
+  color: var(--cine-ink-2);
+  font-family: "Lexend", system-ui, sans-serif;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.cine-btn-quiet:hover { color: var(--cine-ink); background: rgba(255, 255, 255, 0.06); }
+.cine-btn-quiet:focus-visible { outline: 2px solid var(--cine-lime); outline-offset: 2px; }
+
+/* ── Immersive mode ───────────────────────────────────────────────────────
+   Set on <body> by the cinematic shell for as long as one of these screens is
+   mounted. The floating install banner is fixed at z-index 1020 — above the
+   sticky bar AND above the refusal sheet — so on this screen it covers the one
+   button the screen exists for. It is suppressed rather than out-stacked: two
+   fixed elements competing for the bottom of a phone is the problem, and
+   winning the z-index only hides the loser behind the winner. */
+body.eazy-immersive .eazy-install-banner { display: none !important; }
+
+@media (prefers-reduced-motion: reduce) {
+  .cine-glow::before,
+  .cine-glow::after,
+  .cine-art { animation: none; }
+  .cine-card,
+  .cine-panel { animation: none; }
+  .cine-sheet { animation: cine-fade 0.2s ease both; }
+  .cine-card { transition: none; }
+}

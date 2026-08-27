@@ -4,6 +4,42 @@ import { Link, useNavigate } from "react-router-dom";
 import { Swiper, SwiperSlide } from "swiper/react";
 import IntroSlider from '../components/IntroSlider';
 
+// ── WHERE THE PHOTOGRAPHY GOES, AND WHY IT IS A HOOK AND NOT A CSS CLASS ─────
+//
+// The panel used to be `d-none d-md-block`: present in the DOM on every device,
+// painted on none of the phones. That is backwards for an Android-first funnel —
+// almost every real sign-in happens on a handset, and the handset was the one
+// screen with no picture of a customer on it.
+//
+// It now sits ABOVE the form on a phone and in the right-hand column on a
+// desktop. Doing that with two Bootstrap display classes would mean TWO
+// <IntroSlider> instances in the tree: two Swipers, two autoplay timers, and both
+// sets of plates fetched, because `display: none` does not stop an <img> from
+// loading. So the breakpoint is read once and exactly one instance is mounted.
+//
+// The initial value is read synchronously in the useState initialiser rather
+// than in an effect: this is a client-rendered SPA, matchMedia is available on
+// the first render, and reading it later would paint the desktop layout for one
+// frame on every phone.
+const DESKTOP_QUERY = '(min-width: 768px)';
+
+function useIsDesktop() {
+    const [isDesktop, setIsDesktop] = useState(
+        () => typeof window !== 'undefined' && window.matchMedia(DESKTOP_QUERY).matches,
+    );
+
+    useEffect(() => {
+        const mq = window.matchMedia(DESKTOP_QUERY);
+        const onChange = (e) => setIsDesktop(e.matches);
+        mq.addEventListener('change', onChange);
+        // A rotation between mount and this effect would otherwise be missed.
+        setIsDesktop(mq.matches);
+        return () => mq.removeEventListener('change', onChange);
+    }, []);
+
+    return isDesktop;
+}
+
 const Login = ({ setUserSession, tenant }) => {
     const [isLoading, setIsLoading] = useState(true);
     const [email, setEmail] = useState("");
@@ -14,6 +50,7 @@ const Login = ({ setUserSession, tenant }) => {
     const entityId = ENTITY_ID;
     const [loggingIn, setLoggingIn] = useState(false);
     const [loginError, setLoginError] = useState("");
+    const isDesktop = useIsDesktop();
 
     useEffect(() => {
         // Simulating loading delay
@@ -140,6 +177,10 @@ const Login = ({ setUserSession, tenant }) => {
                                     </div>
                                 </nav>
                             </header>
+                            {/* The band. Full-bleed under the brand bar — a card
+                                inset here would read as an advert rather than as
+                                the screen's own ground. */}
+                            {!isDesktop && <IntroSlider tenant={tenant} />}
                             <div className="h-100 py-3 px-3">
                                 <form onSubmit={handleSubmit} className="row h-100 align-items-center justify-content-center">
                                     <div className="col-11 col-sm-8 col-md-11 col-xl-11 col-xxl-10 login-box">
@@ -186,9 +227,11 @@ const Login = ({ setUserSession, tenant }) => {
                                 </div>
                             </footer>
                         </div>
-                        <div className="col-12 col-md-6 col-xl-8 p-4 d-none d-md-block">
-                            <IntroSlider tenant={tenant} />
-                        </div>
+                        {isDesktop && (
+                            <div className="col-12 col-md-6 col-xl-8 p-4">
+                                <IntroSlider tenant={tenant} />
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>

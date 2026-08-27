@@ -22,7 +22,34 @@ import { PANEL_ART, panelGradient, PANEL_SCRIM } from '../lib/artwork';
  * Photographs are optional. Each slide independently falls back to the tenant
  * gradient if its file is absent, so the screen is correct today and gets
  * better as the plates arrive — no code change when they do.
+ *
+ * ── WHY THIS RENDERS AT TWO HEIGHTS ─────────────────────────────────────────
+ * The panel used to be desktop-only: Login.jsx wrapped it in `d-none d-md-block`
+ * and every phone got a bare white form. That is the wrong way round for this
+ * app. Micro Eazy is an Android-first funnel — the handset is the PRIMARY
+ * device, not the degraded one — so the photography, which is the only thing on
+ * this screen that says who the app is for, was invisible to very nearly
+ * everybody who actually signs in.
+ *
+ * So the panel is now a BAND above the form on a phone and the full right-hand
+ * column on a desktop. `--eazy-panel-h` is the one number that differs; the copy
+ * scales from the same breakpoint with clamp() rather than being written twice.
+ * Login.jsx mounts exactly one instance either way — see the note there.
  */
+// The panel's two measurements, as a stylesheet rather than a JS media query,
+// so the FIRST paint is already the right height. A band sized from measured
+// JS renders at one height and corrects after hydration, which on a phone is
+// the form visibly jumping down the screen under the customer's thumb.
+//
+// 220px is deliberate: enough that the photograph reads as a photograph and one
+// line of the promise can sit on it, short enough that the phone-number field is
+// still above the fold on a 360×640 handset — the smallest screen this funnel is
+// composed for.
+const PANEL_CSS = `
+.eazy-panel { --eazy-panel-h: 420px; }
+@media (max-width: 767.98px) { .eazy-panel { --eazy-panel-h: 220px; } }
+`;
+
 const IntroSlider = ({ tenant }) => {
   // Which slide images failed to load. An <img> that 404s fires onError; the
   // SPA rewrite means a missing file arrives as an HTML page instead, which
@@ -39,9 +66,10 @@ const IntroSlider = ({ tenant }) => {
 
   return (
     <div
-      className="card adminuiux-card position-relative overflow-hidden h-100 border-0"
-      style={{ background: gradient, minHeight: 420 }}
+      className="eazy-panel card adminuiux-card position-relative overflow-hidden h-100 border-0"
+      style={{ background: gradient, minHeight: 'var(--eazy-panel-h)' }}
     >
+      <style>{PANEL_CSS}</style>
       {/* ── WHY THE SWIPER IS ABSOLUTELY POSITIONED ────────────────────────
           A Swiper sized with `height: 100%` inherits from a chain of parents
           that are themselves auto-height (card → card-body → row), so it
@@ -60,7 +88,7 @@ const IntroSlider = ({ tenant }) => {
           const showPhoto = !broken.has(slide.id);
           return (
             <SwiperSlide key={slide.id}>
-              <div style={{ position: 'relative', height: '100%', minHeight: 420 }}>
+              <div style={{ position: 'relative', height: '100%', minHeight: 'var(--eazy-panel-h)' }}>
                 {showPhoto && (
                   <img
                     src={slide.file}
@@ -93,17 +121,27 @@ const IntroSlider = ({ tenant }) => {
                     justifyContent: 'center',
                     alignItems: 'center',
                     textAlign: 'center',
-                    padding: '3rem 2rem 4.5rem',
+                    padding: 'clamp(1.25rem, 5vw, 3rem) clamp(1rem, 5vw, 2rem) clamp(2.5rem, 6vw, 4.5rem)',
                   }}
                 >
                   <div style={{ maxWidth: '34rem' }}>
                     <h2
-                      className="text-white mb-3"
-                      style={{ textWrap: 'balance', lineHeight: 1.15 }}
+                      className="text-white mb-2 mb-md-3"
+                      style={{
+                        textWrap: 'balance',
+                        lineHeight: 1.15,
+                        fontSize: 'clamp(1.0625rem, 4.4vw, 1.75rem)',
+                      }}
                     >
                       {slide.title}
                     </h2>
-                    <p className="lead mb-0" style={{ color: 'rgba(255,255,255,0.82)' }}>
+                    {/* The sub-line is the first thing to go when the band is
+                        220px tall. The headline alone carries the slide there;
+                        a squeezed second line only competes with the form. */}
+                    <p
+                      className="lead mb-0 d-none d-md-block"
+                      style={{ color: 'rgba(255,255,255,0.82)' }}
+                    >
                       {slide.description}
                     </p>
                   </div>
@@ -116,8 +154,11 @@ const IntroSlider = ({ tenant }) => {
 
       {/* The lender of record, quietly. The panel is the one place on the
           sign-in screen with room for it. */}
+      {/* Desktop only: in a 220px band this line lands on the pagination dots,
+          and the lender is already named in the footer under the form. */}
       {tenant?.resolved && (
         <p
+          className="d-none d-md-block"
           style={{
             position: 'absolute',
             // Clear of the pagination dots, which Swiper pins to the bottom of

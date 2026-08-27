@@ -30,7 +30,14 @@ import Why from './pages/eco/Why';
 import Ladder from './pages/eco/Ladder';
 import Exposure from './pages/eco/Exposure';
 import Consent from './pages/eco/Consent';
+import CreditReport from './pages/eco/CreditReport';
 import Preview from './pages/eco/Preview';
+
+// Imported for its side effect as much as for the component: loader.css
+// re-skins the template's .loader10 and .loader1 wherever they appear, so every
+// waiting state in the product becomes the Crunch ring without those twenty-odd
+// call sites being edited. See components/eco/loader.css.
+import './components/eco/loader.css';
 
 /**
  * The preview harness is mounted only in development, or when a build is made
@@ -230,6 +237,9 @@ const App = () => {
                 <Route path="/why" element={<PrivateRoute><Why tenant={tenant} /></PrivateRoute>} />
                 <Route path="/limit" element={<PrivateRoute><Ladder tenant={tenant} /></PrivateRoute>} />
                 <Route path="/credit-file" element={<PrivateRoute><Exposure tenant={tenant} /></PrivateRoute>} />
+                {/* Two paths, one component: the counter and one product. */}
+                <Route path="/credit-report" element={<PrivateRoute><CreditReport tenant={tenant} /></PrivateRoute>} />
+                <Route path="/credit-report/:reportKey" element={<PrivateRoute><CreditReport tenant={tenant} /></PrivateRoute>} />
                 <Route path="/permissions" element={<PrivateRoute><Consent tenant={tenant} /></PrivateRoute>} />
                 {PREVIEW && <Route path="/preview" element={<Preview />} />}
                 {PREVIEW && <Route path="/preview/crunch" element={<Preview mode="crunch" />} />}
