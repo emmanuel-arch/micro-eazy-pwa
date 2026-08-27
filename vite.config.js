@@ -16,7 +16,20 @@ export default defineConfig(({ mode }) => {
     plugins: [
       react(),
       VitePWA({
-        registerType: 'auto',
+        // ── 'autoUpdate', NOT 'auto' ──────────────────────────────────────
+        // vite-plugin-pwa accepts exactly two values here: 'prompt' and
+        // 'autoUpdate'. 'auto' is neither. It does not throw — it simply is not
+        // 'autoUpdate', so the plugin takes the 'prompt' path, in which a new
+        // service worker installs into the WAITING state and stays there until
+        // every tab of the app is closed and reopened, or until the app calls
+        // the updateSW() callback to activate it. This app has no update prompt
+        // UI and never calls it. So a deploy reached the user's device, sat
+        // there installed, and did nothing.
+        //
+        // 'autoUpdate' activates the new worker as soon as it installs, which is
+        // the behaviour a borrower-facing app wants: you do not want somebody
+        // repaying a loan against a build from three deploys ago.
+        registerType: 'autoUpdate',
         // ── THE APP'S IDENTITY ────────────────────────────────────────────
         // This used to say "Micromart" and point at the ServiceSuite Cloud
         // icons, so the installed app announced itself as somebody else's
@@ -56,6 +69,23 @@ export default defineConfig(({ mode }) => {
         workbox: {
           globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
           maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
+          // ── THE THREE THAT MAKE A DEPLOY ACTUALLY LAND ───────────────────
+          // clientsClaim + skipWaiting are what 'autoUpdate' is for: install
+          // the new worker, activate it immediately, and take over the pages
+          // that are already open rather than waiting for a cold start.
+          //
+          // cleanupOutdatedCaches deletes precaches from previous builds. With-
+          // out it every deploy leaves its whole precache behind on the device
+          // and Cache Storage grows without bound — which on a phone eventually
+          // gets the whole origin evicted at once, mid-session.
+          clientsClaim: true,
+          skipWaiting: true,
+          cleanupOutdatedCaches: true,
+          // The legacy Micromart worker is now a tombstone that unregisters
+          // itself (public/service-worker.js). Precaching it would let workbox
+          // serve a stale COPY of the tombstone, so it is excluded here and
+          // always fetched from the network.
+          globIgnores: ['**/service-worker.js', '**/firebase-messaging-sw.js'],
           // ── THE ONE THAT WOULD HAVE BITTEN IN PRODUCTION ──────────────────
           // navigateFallback serves the SPA shell for navigations that miss the
           // cache. Without this denylist the service worker would answer

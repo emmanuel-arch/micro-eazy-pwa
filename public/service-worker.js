@@ -1,70 +1,80 @@
-// =========================================
-// Firebase Messaging Setup
-// =========================================
+// ─────────────────────────────────────────────────────────────────────────────
+// TOMBSTONE. This file is not a service worker any more — it is the thing that
+// removes the one that used to live here.
+//
+// WHAT WAS HERE, AND WHY IT WAS A TRAP
+//
+// The previous version of this file was inherited from the Micromart PWA. It
+// did three things, and the combination of them made the app permanently
+// un-updatable:
+//
+//   1. on install   → caches.open('app-cache') and cache.addAll(['/',
+//                     '/index.html', …]). One fixed cache name, never versioned.
+//   2. on activate  → nothing. The comment said "Currently no cache cleanup
+//                     needed".
+//   3. on fetch     → caches.match(request).then(r => r || fetch(request)).
+//                     Cache-first, with no revalidation and no expiry.
+//
+// So the FIRST time any browser loaded the app, it froze '/' and '/index.html'
+// into 'app-cache' forever. index.html is the document that names the hashed
+// bundle for that build. Every later visit was served the frozen document, which
+// asked for a bundle from that same old build. Deploying new code changed
+// nothing that browser would ever see. Clearing the browser cache did not help
+// either — a Cache Storage entry is not the HTTP cache.
+//
+// On top of that it was a SECOND worker at scope '/'. vite-plugin-pwa emits
+// '/sw.js' and injects '/registerSW.js' to register it, and src/main.jsx also
+// registered this file by hand. Two workers fought over the same navigations,
+// which is why the app sometimes looked updated and mostly did not.
+//
+// WHY THIS FILE STILL EXISTS INSTEAD OF BEING DELETED
+//
+// Because deleting it does not reach the browsers that already have it. A
+// browser with this worker registered re-fetches THIS PATH to check for an
+// update. If the file were gone, vercel.json's SPA fallback would answer
+// /service-worker.js with index.html and a text/html content type. The update
+// check fails the script MIME check, the browser keeps the OLD worker installed,
+// and the trap stays shut — permanently, on exactly the devices that already
+// have the problem.
+//
+// So the file stays, serves a valid JavaScript worker, and that worker's only
+// job is to dismantle itself. Once every install has picked this up it can be
+// deleted for real; until then, leave it.
+//
+// Do not add caching to this file. The real worker is /sw.js.
+// ─────────────────────────────────────────────────────────────────────────────
 
-// Load Firebase scripts for service worker
-importScripts('https://www.gstatic.com/firebasejs/10.0.0/firebase-app-compat.js');
-importScripts('https://www.gstatic.com/firebasejs/10.0.0/firebase-messaging-compat.js');
-
-// Initialize Firebase
-firebase.initializeApp({
-  apiKey: "AIzaSyBwZcWRl2hYaHqSXZudWDXX82x0KdZWVQU",
-  authDomain: "servicesuitecloudpwa.firebaseapp.com",
-  projectId: "servicesuitecloudpwa",
-  messagingSenderId: "486863334363",
-  appId: "1:486863334363:web:efdc1af79d8690f8bc15fe",
+// Take over immediately rather than waiting for every tab to close. The whole
+// point is to reach a user who has the app open right now.
+self.addEventListener('install', () => {
+  self.skipWaiting();
 });
 
-// Retrieve Firebase Messaging instance
-const messaging = firebase.messaging();
-
-// Background message handler
-messaging.onBackgroundMessage((payload) => {
-  console.log('[Service Worker] Background message received:', payload);
-
-  const notificationTitle = payload.notification.title;
-  const notificationOptions = {
-    body: payload.notification.body,
-    icon: payload.notification.icon || '/service-suite-cloud-192.png',
-    badge: '/service-suite-cloud-192.png',
-    vibrate: [100, 50, 100],
-    tag: 'pwa-notification',
-    renotify: true,
-    requireInteraction: true, // Keeps notification until user interacts
-    data: payload.data || {},
-
-    // 🔔 For sound, this doesn't directly work in browsers,
-    // but we can simulate attention with vibration and interaction
-  };
-
-  self.registration.showNotification(notificationTitle, notificationOptions);
-});
-
-// Install event
-self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open('app-cache').then((cache) => {
-      return cache.addAll([
-        '/',
-        '/index.html',
-        '/manifest.json',
-        '/service-suite-cloud-192.png',
-        '/service-suite-cloud-512.png'
-      ]);
-    })
-  );
-});
-
-// Activate event
 self.addEventListener('activate', (event) => {
-  // Currently no cache cleanup needed
+  event.waitUntil(
+    (async () => {
+      // 1. Delete every Cache Storage entry this origin holds. 'app-cache' is
+      //    the one that froze the app; the workbox caches are re-created by
+      //    /sw.js on its next install, so clearing them costs one cold load.
+      const names = await caches.keys();
+      await Promise.all(names.map((n) => caches.delete(n)));
+
+      // 2. Stop being the controller.
+      await self.registration.unregister();
+
+      // 3. Reload every open tab. Until a navigation happens the page is still
+      //    controlled by this worker in memory and still holds the old bundle,
+      //    so an unregister alone would look like nothing happened.
+      const clients = await self.clients.matchAll({ type: 'window' });
+      for (const client of clients) {
+        if ('navigate' in client) client.navigate(client.url);
+      }
+    })(),
+  );
 });
 
-// Fetch event (cache-first strategy)
+// Pass everything straight to the network. Never answer from a cache — a single
+// cache hit here is what the whole file exists to undo.
 self.addEventListener('fetch', (event) => {
-  event.respondWith(
-    caches.match(event.request).then((response) => {
-      return response || fetch(event.request);
-    })
-  );
+  event.respondWith(fetch(event.request));
 });

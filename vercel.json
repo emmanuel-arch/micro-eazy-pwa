@@ -1,24 +1,4 @@
 {
-  "$comment": [
-    "THE APEX. This project serves microeazy.servicesuitecloud.com — the customer",
-    "side of the whole ecosystem. It is a static Vite SPA, so it has no server of",
-    "its own; the two rules below are what give it one.",
-    "",
-    "RULE 1 — /api/* is PROXIED to the Connected Suite, not redirected.",
-    "  The borrower session is an httpOnly cookie with SameSite=Lax (see",
-    "  connected-suite/src/lib/portal/session.ts). A Lax cookie is NOT sent on a",
-    "  cross-site XHR, so a browser calling lms.servicesuitecloud.com directly from",
-    "  this origin would authenticate on the OTP step and then be anonymous on every",
-    "  call after it. A Vercel rewrite proxies server-side: the browser only ever",
-    "  sees this origin, the Set-Cookie lands on this domain, and the session works",
-    "  with no CORS and no change to the suite. Do not turn this into a redirect.",
-    "",
-    "RULE 2 — everything else falls back to the SPA shell.",
-    "  Rewrites run AFTER the filesystem check on Vercel, so real files (assets,",
-    "  icons, the manifest, sw.js) are served before this rule is ever consulted.",
-    "  It only catches client-side routes like /crunch or /loan/8812 on a hard",
-    "  reload. Order matters: /api is matched first."
-  ],
   "rewrites": [
     {
       "source": "/api/:path*",
@@ -32,6 +12,14 @@
   "headers": [
     {
       "source": "/sw.js",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }]
+    },
+    {
+      "source": "/service-worker.js",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }]
+    },
+    {
+      "source": "/index.html",
       "headers": [{ "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }]
     }
   ]
