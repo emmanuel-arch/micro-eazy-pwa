@@ -58,7 +58,13 @@ const Password = ({ setUserSession }) => {
             setResetError(
                 result.kind === "unreachable"
                     ? "We could not reach Micromart just now. Please check your connection and try again."
-                    : `We could not find a Micromart Fintech account for that number. Please check it, create an account, or contact customer support on ${SUPPORT_PHONE}.`
+                    : result.kind === "referred"
+                    ? `This number is registered with ${result.name}. Please contact Micromart customer support on ${SUPPORT_PHONE}.`
+                    : result.kind === "several"
+                    ? `More than one account uses this phone number. Please contact Micromart customer support on ${SUPPORT_PHONE}.`
+                    : result.kind === "not-registered"
+                    ? "There is no Micromart Fintech account for this phone number. Go back and create your account."
+                    : `We could not reset that account. Please check the number, or contact customer support on ${SUPPORT_PHONE}.`
             );
             setLoggingIn(false);
         } catch {

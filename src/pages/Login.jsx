@@ -45,15 +45,14 @@ const Login = ({ setUserSession }) => {
         setLoginError("");
         setLoggingIn(true);
         try {
-            // Ask every Micromart book, not one. The result says which of them
-            // this customer belongs to — and refuses rather than guesses when
-            // the answer is "more than one".
+            // The phone number is placed on a book FIRST (Micromart's GetEntity),
+            // so each refusal below says the true reason — see src/lib/signin.js.
             const result = await signInAcrossBooks(account, password);
 
-            if (result.kind === "ambiguous") {
+            if (result.kind === "several") {
                 setLoginError(
-                    `Your account exists on both ${result.names.join(" and ")}. `
-                    + `We cannot sign you in until that is corrected — please contact customer support on ${SUPPORT_PHONE}.`
+                    `More than one account uses this phone number, so we cannot sign you in safely. `
+                    + `Please contact Micromart customer support on ${SUPPORT_PHONE}.`
                 );
                 setLoggingIn(false);
                 return;
@@ -73,21 +72,21 @@ const Login = ({ setUserSession }) => {
                 // Africa). No session, and never "create an account" — that
                 // would open a duplicate on Fintech.
                 setLoginError(
-                    `Your account is with ${result.name}, which this app does not serve. `
+                    `This number is registered with ${result.name}. `
                     + `Please contact Micromart customer support on ${SUPPORT_PHONE}.`
                 );
                 setLoggingIn(false);
                 return;
             }
 
-            if (result.kind === "none") {
-                // Micromart's API says "Invalid account number or password" for
-                // both a wrong password and an account that does not exist, so
-                // the customer is given both roads.
-                setLoginError(
-                    `${result.message || "Invalid account number or password."} `
-                    + `If you do not have a Micromart Fintech account yet, create one below.`
-                );
+            if (result.kind === "not-registered") {
+                setLoginError("There is no Micromart Fintech account for this phone number. Create your account below — it starts with a scan of your ID.");
+                setLoggingIn(false);
+                return;
+            }
+
+            if (result.kind === "bad-password") {
+                setLoginError("The password is incorrect. If you have forgotten it, use Reset Here below.");
                 setLoggingIn(false);
                 return;
             }

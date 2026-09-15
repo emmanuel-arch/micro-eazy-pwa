@@ -6,8 +6,9 @@ import OnboardingValidationRules from './formsections/OnboardingValidationRules'
 import IntroSlider from '../components/IntroSlider';
 import OnboardingID from './segments/OnboardingID';
 import Terms from './Terms';
-import { REGISTRATION_ENTITY_ID } from '../lib/entity';
+import { REGISTRATION_ENTITY_ID, SUPPORT_PHONE } from '../lib/entity';
 import { setConfigurationEntity } from '../lib/session';
+import { lookupBook } from '../lib/signin';
 
 interface RegisterFormData {
     firstName: string;
@@ -290,6 +291,25 @@ const Register = ({ setUserSession }) => {
 
                 if (isValid) {
                     setOnboardingError("");
+
+                    // Before the customer goes any further: is this number already
+                    // a Micromart customer? Opening a second account for them is a
+                    // duplicate somebody has to merge by hand. If the lookup cannot
+                    // answer, registration continues — the lender's own checks still
+                    // run on Registration.
+                    const book = await lookupBook(watch("phone"));
+                    if (book.kind === "served") {
+                        setOnboardingError("This phone number already has a Micromart Fintech account. Go back to Sign In, or reset your password there.");
+                        break;
+                    }
+                    if (book.kind === "referred") {
+                        setOnboardingError(`This phone number is registered with ${book.name}. Please contact Micromart customer support on ${SUPPORT_PHONE}.`);
+                        break;
+                    }
+                    if (book.kind === "several") {
+                        setOnboardingError(`More than one account already uses this phone number. Please contact Micromart customer support on ${SUPPORT_PHONE}.`);
+                        break;
+                    }
 
                     const nearestOffice = findUserOffice(location.latitude!, location.longitude!, offices);
 
