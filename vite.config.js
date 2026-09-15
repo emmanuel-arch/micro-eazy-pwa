@@ -49,6 +49,9 @@ export default defineConfig({
         // The tombstone and FCM's worker must always come from the network; a
         // precached copy of either is a stale worker script.
         globIgnores: ['**/service-worker.js', '**/firebase-messaging-sw.js'],
+        // /api/pwa/* (quote and apply) is proxied by vercel.json. It is never a
+        // navigation the worker may answer with the app shell.
+        navigateFallbackDenylist: [/^\/api\//],
       },
     }),
   ],

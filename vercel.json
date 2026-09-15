@@ -1,5 +1,6 @@
 {
   "rewrites": [
+    { "source": "/api/pwa/:path*", "destination": "https://lms.servicesuitecloud.com/api/pwa/:path*" },
     { "source": "/(.*)", "destination": "/" }
   ],
   "headers": [

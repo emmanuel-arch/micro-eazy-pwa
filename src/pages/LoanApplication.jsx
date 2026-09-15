@@ -34,6 +34,9 @@ const LoanApplication = ({logout}) => {
     const [stkPrompt, setStkPrompt] = useState("");
     const [stkPrompted, setStkPrompted] = useState(false);
     const [stkWait, setStkWait] = useState(false);
+    // The repayment period the customer chose, in the product's own unit.
+    const [selectedPeriod, setSelectedPeriod] = useState(null);
+    const quoteSeq = useRef(0);
 
     useEffect(() => {
         const session = localStorage.getItem("session");
@@ -169,16 +172,19 @@ const LoanApplication = ({logout}) => {
                 setNewLoanAmount(product.MaxPrincipal);
             }
             
+            // Start at the product's own period, exactly as the officer portal's
+            // /Loans/application does; the customer shortens it with the buttons.
+            setSelectedPeriod(Number(product.RepaymentPeriod) || 1);
             setSelectedLoanProduct(product);
         }
     };
 
     useEffect(() => {
-        if (selectedLoanProduct && newLoanAmount) {
+        if (selectedLoanProduct && newLoanAmount && selectedPeriod) {
             handleCalculateLoan();
         }
         // eslint-disable-next-line
-    }, [selectedLoanProduct, newLoanAmount]);
+    }, [selectedLoanProduct, newLoanAmount, selectedPeriod]);
 
     // ── THE TYPED AMOUNT ────────────────────────────────────────────────────
     // A draft the customer edits freely, committed to newLoanAmount (which
@@ -264,14 +270,19 @@ const LoanApplication = ({logout}) => {
             return;
         };
 
-        const storedConfigurationData = localStorage.getItem('configuration');
-        const configurationDataJson = JSON.parse(storedConfigurationData);
-
         const session = localStorage.getItem("session");
         const sessionData = JSON.parse(session);
 
+        // Only the latest request may paint: tapping 4 then 6 weeks quickly must
+        // not leave the 4-week schedule on screen because it answered last.
+        const seq = ++quoteSeq.current;
+
         try {
-            const response = await fetch("https://micromartafrica.co.ke/MicromartAPI/Mobile/Application/LoanPreview", {
+            // NOT Micromart's LoanPreview: it ignores a chosen period and always
+            // prices the product's ceiling. /api/pwa/quote runs the lender's own
+            // sp_LoanCalculator with @SelectedPeriod, and answers in LoanPreview's
+            // shape (Table / Table1), so everything below renders unchanged.
+            const response = await fetch("/api/pwa/quote", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -280,18 +291,24 @@ const LoanApplication = ({logout}) => {
                 body: JSON.stringify({
                     productId: selectedLoanProduct.ID,
                     principal: parseFloat(newLoanAmount),
+                    period: selectedPeriod,
                 }),
             });
+            if (seq !== quoteSeq.current) return;
 
-            if (response.ok) {
-                const data = await response.json();
-                console.log("Loan Schedule", data);
+            if (response.status === 401) {
+                logout();
+                navigate("/");
+                return;
+            }
+            const data = await response.json().catch(() => null);
+            if (response.ok && data?.success) {
                 setNewLoanSchedule(data);
             } else {
-                console.error("Failed to fetch schedule");
+                setValidationError(data?.message || "We could not price this loan just now. Please try again.");
             }
         } catch (error) {
-            console.error("Error fetching schedule:", error);
+            if (seq === quoteSeq.current) setValidationError("We could not price this loan just now. Please try again.");
         }
     };
 
@@ -320,42 +337,45 @@ const LoanApplication = ({logout}) => {
             const sessionData = JSON.parse(session);
 
             try {
-                const response = await fetch("https://micromartafrica.co.ke/MicromartAPI/Mobile/Application/LoanApplicationValidation", {
+                // /api/pwa/apply runs the lender's own gate (sp_ValidateLoanApplication)
+                // and books with sp_InsertLoan @SelectedPeriod — the loan lands in the
+                // product's workflow (1022 for every Micromart Fintech product) at the
+                // period on screen. The customer is identified by their session token
+                // on the server, never by ids sent from here.
+                const response = await fetch("/api/pwa/apply", {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
+                        'Authorization': `Bearer ${sessionData.token}`
                     },
                     body: JSON.stringify({
-                        borrowerAccount: sessionData.accountNumber,
-                        borrowedAmount: parseFloat(newLoanAmount),
-                        borrowerId: sessionData.userId,
-                        // Session, not configuration — see getLoanProducts. The
-                        // lender's validation finds the borrower by account
-                        // number WITHIN this entity.
-                        entityId: activeEntityId(),
                         productId: selectedLoanProduct.ID,
-                        borrowerType: 1,
+                        principal: parseFloat(newLoanAmount),
+                        period: selectedPeriod,
+                        acceptedTerms: true,
                     }),
                 });
 
-                if (response.ok) {
-                    const data = await response.json();
-                    ///console.log("Loan Application", data);
-    
-                    if(data.code===200){
-                        setSubmittingLoan(false);
-                        setValidationError("");
-                        setSelectedLoanProduct(null);
-                        setNewLoanSchedule(null);
-                        setApplicationSuccess("Loan #"+(data.loanID ?? data.LoanID)+" applied successfully.");
-                    }else{
-                        setSubmittingLoan(false);
-                        setValidationError(data.Response);
-                    }
+                if (response.status === 401) {
+                    logout();
+                    navigate("/");
+                    return;
+                }
+                const data = await response.json().catch(() => null);
+                if (response.ok && data?.success) {
+                    const unit = String(selectedLoanProduct.RepaymentPeriodName || "week").toLowerCase();
+                    const weeks = data.selectedPeriod ?? selectedPeriod;
+                    setSubmittingLoan(false);
+                    setValidationError("");
+                    setSelectedLoanProduct(null);
+                    setNewLoanSchedule(null);
+                    setApplicationSuccess(
+                        `Loan #${data.loanId} applied successfully, repaid over ${weeks} ${unit}${weeks === 1 ? "" : "s"}.`
+                        + (data.stage ? ` It is now with ${data.stage} for review.` : "")
+                    );
                 } else {
                     setSubmittingLoan(false);
-                    setValidationError("Loan application Failed, Try again");
-                    ///console.error("Failed, Try again");
+                    setValidationError(data?.message || "Loan application Failed, Try again");
                 }
             } catch (error) {
                 setSubmittingLoan(false);
@@ -596,9 +616,44 @@ const LoanApplication = ({logout}) => {
                                     </div>
                                 </div>
                             </div>
+                            {/* ── REPAYMENT PERIOD ────────────────────────────────────
+                                1 to the product's own RepaymentPeriod, in its own unit —
+                                the same choice ServiceSuite-Portal's /Loans/application
+                                offers. Every tap re-prices at that period. */}
+                            {Number(selectedLoanProduct.RepaymentPeriod) > 1 && (
+                                <div className="col-12 mt-3">
+                                    <div className="d-flex justify-content-between align-items-center mb-2">
+                                        <span className="fw-medium">Repayment period</span>
+                                        <small className="text-secondary">
+                                            {selectedPeriod} {String(selectedLoanProduct.RepaymentPeriodName || "Week").toLowerCase()}{selectedPeriod === 1 ? "" : "s"}
+                                        </small>
+                                    </div>
+                                    <div className="d-flex flex-wrap gap-2" role="group" aria-label="Repayment period">
+                                        {Array.from({ length: Number(selectedLoanProduct.RepaymentPeriod) }, (_, i) => i + 1).map((p) => (
+                                            <button
+                                                key={p}
+                                                type="button"
+                                                aria-pressed={selectedPeriod === p}
+                                                className={`btn ${selectedPeriod === p ? 'btn-theme' : 'btn-outline-theme'}`}
+                                                style={{ minWidth: 48 }}
+                                                onClick={() => {
+                                                    if (selectedPeriod === p) return;
+                                                    setNewLoanSchedule(null);
+                                                    setSelectedPeriod(p);
+                                                }}
+                                            >
+                                                {p}
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <small className="text-secondary d-block mt-1">
+                                        {String(selectedLoanProduct.RepaymentPeriodName || "Week")}s to repay — a shorter period costs less interest.
+                                    </small>
+                                </div>
+                            )}
                             {/*<div className="col">
                                 <div className="d-flex flex-row flex-md-column justify-content-between align-items-end">
-                                    
+
                                     <button
                                         className="btn btn-outline-secondary mt-2 mt-md-0"
                                         type="button"
