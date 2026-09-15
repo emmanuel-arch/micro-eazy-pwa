@@ -31,3 +31,19 @@ ReactDOM.createRoot(document.getElementById('root')).render(
 // it. public/service-worker.js is now a tombstone that unregisters itself on
 // any browser still holding the old one. Firebase messaging registers its own
 // worker under its own scope — see notificationPermission.js.
+
+// ── ONE RELOAD WHEN A NEW BUILD TAKES OVER ───────────────────────────────────
+// The worker precaches the app, so the first open after a deploy still runs
+// the OLD bundle from Cache Storage while the new worker installs; it activates
+// and claims this page (skipWaiting + clientsClaim), but the code on screen is
+// already loaded. That is how a customer kept seeing "Invalid ID data detected"
+// after the fix was live. When control passes from one worker to another — an
+// update, not a first install — reload once so the new build is what runs.
+if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+  let reloading = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (reloading) return;
+    reloading = true;
+    window.location.reload();
+  });
+}

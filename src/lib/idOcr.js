@@ -90,15 +90,21 @@ export function readKenyanId(reply) {
   }
 
   // ── Names ─────────────────────────────────────────────────────────────────
+  // The card's own labels decide, in this order, and idInfo's split comes last:
+  // on the green card Micromart splits FULL NAMES at the first word and calls
+  // that word the SURNAME ("EMMANUEL KIPLETING" → surname EMMANUEL, given
+  // KIPLETING), which reversed the name. The printed line is already in order.
+  const full = afterLabel(lines, /FULL\s*NAMES?/, (l) => isNameLine(l) && lineWords(l).length >= 2);
+  const labelledSurname = afterLabel(lines, /^SURNAME\b/, isNameLine);
+  const labelledGiven = afterLabel(lines, /^GIVEN\s*NAMES?\b/, isNameLine);
   const shapedName = (v) => typeof v === "string" && isNameLine(v.trim().toUpperCase());
-  let surname = shapedName(info.surname) ? info.surname.trim().toUpperCase() : afterLabel(lines, /^SURNAME\b/, isNameLine);
-  let given = shapedName(info.givenNames) && info.surname ? info.givenNames.trim().toUpperCase() : afterLabel(lines, /^GIVEN\s*NAMES?\b/, isNameLine);
-  let words;
-  if (surname && given) {
-    words = [...lineWords(given), ...lineWords(surname)];
-  } else {
-    const full = afterLabel(lines, /FULL\s*NAMES?/, (l) => isNameLine(l) && lineWords(l).length >= 2);
-    words = full ? lineWords(full) : [];
+  let words = [];
+  if (full) {
+    words = lineWords(full);
+  } else if (labelledSurname && labelledGiven) {
+    words = [...lineWords(labelledGiven), ...lineWords(labelledSurname)];
+  } else if (shapedName(info.surname) && shapedName(info.givenNames)) {
+    words = [...lineWords(info.givenNames.trim().toUpperCase()), ...lineWords(info.surname.trim().toUpperCase())];
   }
   const firstName = words.length >= 2 ? titleCase(words[0]) : null;
   const otherName = words.length >= 2 ? titleCase(words.slice(1).join(" ")) : null;
