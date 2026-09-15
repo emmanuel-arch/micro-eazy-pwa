@@ -4,6 +4,7 @@ import { Navigation, Pagination } from 'swiper/modules';
 import 'swiper/css';
 import 'swiper/css/navigation';
 import 'swiper/css/pagination';
+import { activeEntityId } from '../lib/session';
 
 function Calculator() {
     const [userId, setUserId] = useState(null);
@@ -25,12 +26,10 @@ function Calculator() {
     }, []);
 
     const getLoanProducts = async () => {
-        const storedConfigurationData = localStorage.getItem('configuration');
-        const configurationDataJson = JSON.parse(storedConfigurationData);
         const session = localStorage.getItem("session");
         const sessionData = JSON.parse(session);
 
-        if (sessionData?.userId && configurationDataJson?.EntityId) {
+        if (sessionData?.userId) {
             try {
                 const response = await fetch("https://micromartafrica.co.ke/MicromartAPI/Mobile/Application/AvailableLoanProducts", {
                     method: "POST",
@@ -39,7 +38,8 @@ function Calculator() {
                     },
                     body: JSON.stringify({
                         PhoneNumber: `${sessionData.userId}`,
-                        EntityId: parseInt(sessionData.userId),
+                        // The session's book — see LoanApplication.jsx getLoanProducts.
+                        EntityId: activeEntityId(),
                         RequestFlag: 0,
                     }),
                 });

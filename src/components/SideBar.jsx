@@ -60,61 +60,6 @@ const SideBar = ({ logout }) => {
               <span className="menu-name">Statement</span>
             </Link>
           </li>
-
-          {/* ── The ecosystem screens ────────────────────────────────────────
-              Everything else in this menu is Micromart's core banking. These
-              five are what the ecosystem adds on top. They are grouped rather
-              than interleaved because they authenticate differently: the first
-              one a customer opens asks for an SMS code, and that is less
-              surprising when the group is visibly its own thing. */}
-          <li className="nav-item">
-            <Link to="/pay" className="nav-link" onClick={handleLinkClick}>
-              <i className="menu-icon bi bi-phone" />{" "}
-              <span className="menu-name">Pay by M-PESA</span>
-            </Link>
-          </li>
-          <li className="nav-item">
-            <Link to="/auto-repay" className="nav-link" onClick={handleLinkClick}>
-              <i className="menu-icon bi bi-arrow-repeat" />{" "}
-              <span className="menu-name">Auto-repay</span>
-            </Link>
-          </li>
-          <li className="nav-item">
-            <Link to="/crunch" className="nav-link" onClick={handleLinkClick}>
-              <i className="menu-icon bi bi-file-earmark-bar-graph" />{" "}
-              <span className="menu-name">Statement crunch</span>
-            </Link>
-          </li>
-          <li className="nav-item">
-            <Link to="/why" className="nav-link" onClick={handleLinkClick}>
-              <i className="menu-icon bi bi-eye" />{" "}
-              <span className="menu-name">Why this decision</span>
-            </Link>
-          </li>
-          <li className="nav-item">
-            <Link to="/limit" className="nav-link" onClick={handleLinkClick}>
-              <i className="menu-icon bi bi-graph-up-arrow" />{" "}
-              <span className="menu-name">Your limit</span>
-            </Link>
-          </li>
-          <li className="nav-item">
-            <Link to="/credit-report" className="nav-link" onClick={handleLinkClick}>
-              <i className="menu-icon bi bi-file-earmark-text" />{" "}
-              <span className="menu-name">Get a CRB report</span>
-            </Link>
-          </li>
-          <li className="nav-item">
-            <Link to="/credit-file" className="nav-link" onClick={handleLinkClick}>
-              <i className="menu-icon bi bi-clipboard-data" />{" "}
-              <span className="menu-name">Your credit file</span>
-            </Link>
-          </li>
-          <li className="nav-item">
-            <Link to="/permissions" className="nav-link" onClick={handleLinkClick}>
-              <i className="menu-icon bi bi-shield-check" />{" "}
-              <span className="menu-name">Permissions</span>
-            </Link>
-          </li>
           <li className="nav-item">
             <Link to="/ledger" className="nav-link" onClick={handleLinkClick}>
               <i className="menu-icon bi bi-calculator" />{" "}

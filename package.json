@@ -1,5 +1,5 @@
 {
-  "name": "service-suite-customer-app",
+  "name": "service-suite-cloud-app",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -7,9 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview",
-    "brand:icons": "node scripts/brand-icons.mjs",
-    "art:login": "node scripts/login-art.mjs"
+    "preview": "vite preview"
   },
   "dependencies": {
     "bootstrap": "^5.3.3",
@@ -35,7 +33,6 @@
     "eslint-plugin-react-hooks": "^5.0.0",
     "eslint-plugin-react-refresh": "^0.4.16",
     "globals": "^15.14.0",
-    "sharp": "^0.35.4",
     "vite": "^6.2.0",
     "vite-plugin-pwa": "^0.21.1"
   }

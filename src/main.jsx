@@ -2,6 +2,12 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import { SessionProvider } from './context/SessionContext';
+import { enforceRealm } from './lib/realm';
+
+// BEFORE anything reads storage. SessionContext loads the cached session during
+// its own initialisation, so a guard that ran inside an effect would already
+// have handed a stranger's session to the app. See src/lib/realm.js.
+enforceRealm();
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
@@ -13,23 +19,15 @@ ReactDOM.createRoot(document.getElementById('root')).render(
 
 // ── NO SERVICE WORKER IS REGISTERED HERE, DELIBERATELY ──────────────────────
 //
-// This file used to register '/service-worker.js' by hand. That was the second
-// service worker on this origin: vite-plugin-pwa already emits '/sw.js' and
-// injects '/registerSW.js' into index.html to register it. Two workers at scope
-// '/' both claim the same navigations, control flips between reloads, and the
-// app is served by whichever one won that particular load.
+// This used to register '/service-worker.js' by hand: a second worker at scope
+// '/' beside the '/sw.js' that vite-plugin-pwa emits and '/registerSW.js'
+// registers. The hand-written one cached '/' and '/index.html' into a never-
+// versioned 'app-cache' and answered cache-first, so the first build a browser
+// saw was frozen there and no later deploy could reach it.
 //
-// The hand-written one was the worse of the two. It cached '/' and
-// '/index.html' into a cache named 'app-cache', never versioned that name,
-// never cleaned it up on activate, and answered every fetch cache-first with no
-// revalidation. Once a browser had loaded the app even once, its copy of
-// index.html — and therefore the hashed bundle that copy names — was frozen
-// permanently. No deploy could dislodge it.
-//
-// public/service-worker.js still EXISTS, and must: it is now a tombstone that
-// unregisters itself and deletes that cache on every browser that still has it.
-// Deleting the file instead would leave those browsers requesting a path that
-// the SPA rewrite answers with index.html, which fails the script MIME check and
-// leaves the old worker installed forever. See public/service-worker.js.
-//
-// Registration of the real worker is vite-plugin-pwa's job. Do not add one here.
+// That matters more on portal.servicesuitecloud.com than anywhere: the origin
+// already has the Micro Eazy app's workbox worker installed on customer
+// devices, and only a worker at '/sw.js' that activates immediately replaces
+// it. public/service-worker.js is now a tombstone that unregisters itself on
+// any browser still holding the old one. Firebase messaging registers its own
+// worker under its own scope — see notificationPermission.js.

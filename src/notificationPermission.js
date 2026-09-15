@@ -1,5 +1,6 @@
 import { messaging } from "./firebase";
 import { getToken, onMessage } from "firebase/messaging";
+import { activeEntityId } from "./lib/session";
 
 export async function requestPermission() {
   try {
@@ -10,18 +11,10 @@ export async function requestPermission() {
       return;
     }
 
-    // ── Register FCM's OWN worker, explicitly ────────────────────────────
-    // This used to be `await navigator.serviceWorker.ready`, which hands back
-    // whichever worker happens to control the page. That resolved to the old
-    // hand-registered /service-worker.js, which had the Firebase background
-    // handler inside it. That worker is now a tombstone (see
-    // public/service-worker.js) and the controller is workbox's /sw.js, which
-    // knows nothing about FCM — so `ready` would return a registration that
-    // silently drops every background message.
-    //
-    // /firebase-messaging-sw.js is a standalone worker that already carries the
-    // onBackgroundMessage handler. Naming it here is what keeps notifications
-    // working now that the two concerns are in two files.
+    // FCM's OWN worker, under its own scope. `navigator.serviceWorker.ready`
+    // returns whichever worker controls the page — workbox's /sw.js, which has
+    // no Firebase background handler, so every background message would be
+    // dropped. /firebase-messaging-sw.js carries onBackgroundMessage.
     const registration = await navigator.serviceWorker.register(
       '/firebase-messaging-sw.js',
       { scope: '/firebase-cloud-messaging-push-scope' },
@@ -46,7 +39,7 @@ export async function requestPermission() {
                 // 'Authorization': `Bearer ${accessToken}`
             },
             body: JSON.stringify({
-                EntityId: userId,
+                EntityId: activeEntityId(),
                 PhoneNumber: fcmToken,
             }),
         });

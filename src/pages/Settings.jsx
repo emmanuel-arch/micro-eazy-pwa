@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { ENTITY_ID } from '../lib/tenant';
 import { Link, useNavigate } from "react-router-dom";
+import { activeEntityId } from "../lib/session";
 
 function Settings (){
     const [isLoading, setIsLoading] = useState(true);
@@ -13,7 +13,10 @@ function Settings (){
     const [hidePassword, setHidePassword] = useState(true);
     const [hideNewPassword, setHideNewPassword] = useState(true);
     const [hideConfirmPassword, setHideConfirmPassword] = useState(true);
-    const entityId = ENTITY_ID;
+    // The signed-in customer's own book. Was hard-coded "3002", so a Micromart
+    // Fintech customer changing their password was aiming at a book they are
+    // not on.
+    const entityId = String(activeEntityId());
     const [loggingIn, setLoggingIn] = useState(false);
     const [loginError, setLoginError] = useState("");
     const [loginSuccess, setLoginSuccess] = useState("");

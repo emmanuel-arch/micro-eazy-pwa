@@ -6,6 +6,7 @@ import Terms from './Terms';
 import 'swiper/css';
 import 'swiper/css/navigation';
 import 'swiper/css/pagination';
+import { activeEntityId } from '../lib/session';
 
 const LoanApplication = ({logout}) => {
     const navigate = useNavigate();
@@ -90,13 +91,10 @@ const LoanApplication = ({logout}) => {
     };
 
     const getLoanProducts = async () => {
-        const storedConfigurationData = localStorage.getItem('configuration');
-        const configurationDataJson = JSON.parse(storedConfigurationData);
-
         const session = localStorage.getItem("session");
         const sessionData = JSON.parse(session);
 
-        if (sessionData?.userId && configurationDataJson?.EntityId) {
+        if (sessionData?.userId) {
             try {
                 const response = await fetch("https://micromartafrica.co.ke/MicromartAPI/Mobile/Application/AvailableLoanProducts", {
                     method: "POST",
@@ -106,11 +104,15 @@ const LoanApplication = ({logout}) => {
                     },
                     body: JSON.stringify({
                         PhoneNumber: `${sessionData.userId}`,
-                        // Was `parseInt(sessionData.userId)` — the BORROWER's id
-                        // in the entity field, so the product list was scoped to
-                        // an entity that does not exist. The entity comes from
-                        // configuration (3005, MICROMART FINTECH).
-                        EntityId: parseInt(configurationDataJson.EntityId),
+                        // The book the customer SIGNED IN on, from the session —
+                        // never configuration.EntityId. That copy is rewritten by
+                        // the branding fetch in App.jsx, which on a reload can
+                        // land with the pre-login default (3002) after the
+                        // session's own book, and then a Fintech customer is
+                        // shown Micromart Africa's shelf. Applying for one of
+                        // those puts a 3002 product on a 3005 customer:
+                        // sp_InsertLoan takes the entity from the PRODUCT.
+                        EntityId: activeEntityId(),
                         RequestFlag: 0,
                     }),
                 });
@@ -131,7 +133,11 @@ const LoanApplication = ({logout}) => {
 
                         const data = await response.json();
                         console.log("Loan Products", data);
-                        setLoanApplicationProducts(data);
+                        // Their endpoint can return retired products (IsActive 2
+                        // on Micromart's book). Offering one sends the customer
+                        // into a workflow the lender has closed.
+                        const rows = Array.isArray(data) ? data : (Array.isArray(data?.Table) ? data.Table : []);
+                        setLoanApplicationProducts(rows.filter((p) => p.IsActive == null || Number(p.IsActive) === 1));
                     } else {
                         console.error("Failed to fetch products");
                     }
@@ -260,11 +266,11 @@ const LoanApplication = ({logout}) => {
             setTermsError("");
             setValidationError("");
             if (!selectedLoanProduct || !newLoanAmount) {
-                setValidationError("Select Product & Enter loan amount!"); return;
+                setValidationError("Select Product & Enter loan amount!");
+                setSubmittingLoan(false);
+                return;
             }
 
-            const storedConfigurationData = localStorage.getItem('configuration');
-            const configurationDataJson = JSON.parse(storedConfigurationData);
             const session = localStorage.getItem("session");
             const sessionData = JSON.parse(session);
 
@@ -278,7 +284,10 @@ const LoanApplication = ({logout}) => {
                         borrowerAccount: sessionData.accountNumber,
                         borrowedAmount: parseFloat(newLoanAmount),
                         borrowerId: sessionData.userId,
-                        entityId: configurationDataJson.EntityId,
+                        // Session, not configuration — see getLoanProducts. The
+                        // lender's validation finds the borrower by account
+                        // number WITHIN this entity.
+                        entityId: activeEntityId(),
                         productId: selectedLoanProduct.ID,
                         borrowerType: 1,
                     }),
@@ -293,7 +302,7 @@ const LoanApplication = ({logout}) => {
                         setValidationError("");
                         setSelectedLoanProduct(null);
                         setNewLoanSchedule(null);
-                        setApplicationSuccess("Loan #"+data.loanID+" applied successfully.");
+                        setApplicationSuccess("Loan #"+(data.loanID ?? data.LoanID)+" applied successfully.");
                     }else{
                         setSubmittingLoan(false);
                         setValidationError(data.Response);
@@ -371,7 +380,7 @@ const LoanApplication = ({logout}) => {
                 body: JSON.stringify({
                     Amount: stkAmount,
                     PhoneNumber: stkPhoneNumber,
-                    EntityId: 7
+                    EntityId: activeEntityId(),
                 }),
             });
             const data = await response.json();
@@ -397,7 +406,10 @@ const LoanApplication = ({logout}) => {
             <div className="card mb-4">
                 <div className="card-body pb-0">
                     <div className='swiper-container'>
-                        {AccountData && AccountData[0].LoanLimit> 0 ? (
+                        {/* NO LIMIT → nothing is eligible. This read `LoanLimit > 0`,
+                            which hid the shelf from every customer who HAS a limit
+                            and left the eligibility filter below unreachable. */}
+                        {AccountData && !(Number(AccountData[0]?.LoanLimit) > 0) ? (
                             <div className="p-3">
                                 <div className="text-center text-muted">You do not have any eligible loan products available.</div>
                             </div>

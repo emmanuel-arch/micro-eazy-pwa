@@ -5,6 +5,7 @@ import ProfileID from './segments/ProfileID';
 import ProfileDetials from './segments/ProfileDetails';
 import ProfileAttachments from './segments/ProfileAttachments'
 import Account from './segments/Account'
+import { activeEntityId } from '../lib/session';
 
 function Profile() {
   const [configurationData, setConfigurationData] = useState(null);
@@ -25,11 +26,13 @@ function Profile() {
         ///console.log("Configuration Data: ",configurationDataJson);
         setConfigurationData(configurationDataJson); 
         setDdFolder(configurationDataJson.driveFolder);
-        setEntityId(configurationDataJson.EntityId)
       } catch (error) {
         console.error('Error parsing data:', error);
       }
     }
+    // The customer's book comes from the session, not the branding cache — see
+    // LoanApplication.jsx getLoanProducts.
+    setEntityId(String(activeEntityId()));
 
     const session = localStorage.getItem("session");
     if (session) {
@@ -45,12 +48,10 @@ function Profile() {
 
   const fetchInitialOnboardingSettings = async () => {
     // Fetch only on initial load to get initialIncompleteStep
-    const storedConfigurationData = localStorage.getItem('configuration');
-    const configurationDataJson = JSON.parse(storedConfigurationData);
     const session = localStorage.getItem("session");
     const sessionData = JSON.parse(session);
 
-    if (sessionData.userId && configurationDataJson.EntityId) {
+    if (sessionData?.userId) {
         try {
             const response = await fetch(
                 "https://micromartafrica.co.ke/MicromartAPI/Mobile/Application/ProfileProgress",
@@ -61,7 +62,7 @@ function Profile() {
                     },
                     body: JSON.stringify({
                         phoneNumber: "",
-                        entityId: parseInt(configurationDataJson.EntityId),
+                        entityId: activeEntityId(),
                         requestFlag: sessionData.userId,
                     }),
                 }
@@ -90,12 +91,10 @@ function Profile() {
   const fetchOnboardingSettings = async (origin) => {
     console.log("Request Origin",origin);
 
-    const storedConfigurationData = localStorage.getItem('configuration');
-    const configurationDataJson = JSON.parse(storedConfigurationData);
     const session = localStorage.getItem("session");
     const sessionData = JSON.parse(session);
 
-    if(sessionData.userId && configurationDataJson.EntityId){
+    if(sessionData?.userId){
       try {
         
         const response = await fetch(
@@ -107,7 +106,7 @@ function Profile() {
                 },
                 body: JSON.stringify({
                     phoneNumber: "",
-                    entityId: parseInt(configurationDataJson.EntityId),
+                    entityId: activeEntityId(),
                     requestFlag: sessionData.userId,
                 }),
             }

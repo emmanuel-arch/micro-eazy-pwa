@@ -1,19 +1,23 @@
 import React, { useEffect, useState } from "react";
-import { ENTITY_ID } from '../lib/tenant';
 import { Link, useNavigate } from "react-router-dom";
 import { Swiper, SwiperSlide } from "swiper/react";
 import IntroSlider from '../components/IntroSlider';
+import { resetPasswordAcrossBooks } from "../lib/signin";
 
-const Password = ({ setUserSession, tenant }) => {
+const Password = ({ setUserSession }) => {
     const [isLoading, setIsLoading] = useState(true);
     const [email, setEmail] = useState("");
     const [account, setAccount] = useState("");
     const [password, setPassword] = useState("");
     const navigate = useNavigate();
     const [hidePassword, setHidePassword] = useState(true);
-    const entityId = ENTITY_ID;
+    // Was `const entityId = "3002"`, so a Micromart Fintech customer asking for
+    // a reset was told nothing had gone wrong and never received a message.
+    // resetPasswordAcrossBooks() walks the books in order and stops at the
+    // first that answers — one reset, one SMS. See src/lib/signin.js.
     const [loggingIn, setLoggingIn] = useState(false);
     const [reset, setReset] = useState(false);
+    const [resetError, setResetError] = useState("");
 
     useEffect(() => {
         // Simulating loading delay
@@ -38,34 +42,27 @@ const Password = ({ setUserSession, tenant }) => {
         e.preventDefault();
 
         setLoggingIn(true);
+        setResetError("");
         try {
-            const response = await fetch(
-                "https://micromartafrica.co.ke/MicromartAPI/Mobile/Application/ResetPassword",
-                {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                    body: JSON.stringify({
-                        AccountNumber: account,
-                        password: account,
-                        entityId: parseInt(entityId),
-                    }),
-                }
-            );
+            const result = await resetPasswordAcrossBooks(account);
 
-            if (response.ok) {
-                // Redirect to Login
-                // navigate("/login");
+            if (result.kind === "ok") {
                 setReset(true);
                 setLoggingIn(false);
-            } else {
-                setLoggingIn(false);
-                console.error("Password reset failed");
+                return;
             }
-        } catch (error) {
+
+            // The screen used to log these to the console and leave the customer
+            // staring at a spinner that had stopped. Say what happened.
+            setResetError(
+                result.kind === "unreachable"
+                    ? "We could not reach Micromart just now. Please check your connection and try again."
+                    : "We could not find that account number. Please check it and try again."
+            );
             setLoggingIn(false);
-            console.error("Password reset failed:", error);
+        } catch {
+            setLoggingIn(false);
+            setResetError("Password reset failed. Please try again.");
         }
     };
   
@@ -131,6 +128,7 @@ const Password = ({ setUserSession, tenant }) => {
                                                 {hidePassword? <i className="bi bi-eye" />:<i className="bi bi-eye-slash" />}
                                             </button>
                                         </div> */}
+                                        {resetError && <div className="alert alert-danger my-3">{resetError}</div>}
                                         {reset ?
                                             <div className="alert alert-success text-center" role="alert">
                                                 <h4 className="alert-heading">Password Reset Successful!</h4>
@@ -159,7 +157,7 @@ const Password = ({ setUserSession, tenant }) => {
                             </div>
                             <footer className="adminuiux-footer mt-auto">
                                 <div className="container-fluid text-center">
-                                    <span className="small">© {new Date().getFullYear()} {tenant?.name || ''} · Powered by Micro Eazy</span>
+                                    <span className="small">Copyright @2025, <a href="https://techcrast.co.ke" target="_blank">TechCrast Software Solutions LTD</a></span>
                                 </div>
                             </footer>
                         </div>

@@ -1,5 +1,4 @@
 import React, { useEffect, useState, useRef } from "react";
-import { ENTITY_ID } from '../lib/tenant';
 import { Link, UNSAFE_getPatchRoutesOnNavigationFunction, useNavigate } from "react-router-dom";
 import { type OnboardingSettings }  from "./formsections/OnboardingSettings";
 import { useForm, SubmitHandler, FieldName, set } from 'react-hook-form';
@@ -7,6 +6,7 @@ import OnboardingValidationRules from './formsections/OnboardingValidationRules'
 import IntroSlider from '../components/IntroSlider';
 import OnboardingID from './segments/OnboardingID';
 import Terms from './Terms';
+import { REGISTRATION_ENTITY_ID } from '../lib/entity';
 
 interface RegisterFormData {
     firstName: string;
@@ -97,7 +97,12 @@ const Register = ({ setUserSession }) => {
 
     const [showTermsModal, setShowTermsModal] = useState(false);
     
-    const entityId = ENTITY_ID;
+    // A NEW self-service customer joins the fintech book, not the field book:
+    // its products are the ones an app customer can be sold, and its single
+    // branch (unit 129, Main Office) is where a customer with no relationship
+    // officer belongs. Registering into 3002 creates a customer a field RO is
+    // expected to own, and nobody would. See src/lib/entity.js.
+    const entityId = String(REGISTRATION_ENTITY_ID);
 
     const getUserLocation = () => {
         if (!navigator.geolocation) {

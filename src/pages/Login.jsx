@@ -1,56 +1,25 @@
 import React, { useEffect, useState } from "react";
-import { ENTITY_ID } from '../lib/tenant';
 import { Link, useNavigate } from "react-router-dom";
 import { Swiper, SwiperSlide } from "swiper/react";
 import IntroSlider from '../components/IntroSlider';
+import { signInAcrossBooks } from "../lib/signin";
+import { writeSession, setConfigurationEntity } from "../lib/session";
+import { FINTECH_APP_ORIGIN } from "../lib/entity";
 
-// ── WHERE THE PHOTOGRAPHY GOES, AND WHY IT IS A HOOK AND NOT A CSS CLASS ─────
-//
-// The panel used to be `d-none d-md-block`: present in the DOM on every device,
-// painted on none of the phones. That is backwards for an Android-first funnel —
-// almost every real sign-in happens on a handset, and the handset was the one
-// screen with no picture of a customer on it.
-//
-// It now sits ABOVE the form on a phone and in the right-hand column on a
-// desktop. Doing that with two Bootstrap display classes would mean TWO
-// <IntroSlider> instances in the tree: two Swipers, two autoplay timers, and both
-// sets of plates fetched, because `display: none` does not stop an <img> from
-// loading. So the breakpoint is read once and exactly one instance is mounted.
-//
-// The initial value is read synchronously in the useState initialiser rather
-// than in an effect: this is a client-rendered SPA, matchMedia is available on
-// the first render, and reading it later would paint the desktop layout for one
-// frame on every phone.
-const DESKTOP_QUERY = '(min-width: 768px)';
-
-function useIsDesktop() {
-    const [isDesktop, setIsDesktop] = useState(
-        () => typeof window !== 'undefined' && window.matchMedia(DESKTOP_QUERY).matches,
-    );
-
-    useEffect(() => {
-        const mq = window.matchMedia(DESKTOP_QUERY);
-        const onChange = (e) => setIsDesktop(e.matches);
-        mq.addEventListener('change', onChange);
-        // A rotation between mount and this effect would otherwise be missed.
-        setIsDesktop(mq.matches);
-        return () => mq.removeEventListener('change', onChange);
-    }, []);
-
-    return isDesktop;
-}
-
-const Login = ({ setUserSession, tenant }) => {
+const Login = ({ setUserSession }) => {
     const [isLoading, setIsLoading] = useState(true);
     const [email, setEmail] = useState("");
     const [account, setAccount] = useState("");
     const [password, setPassword] = useState("");
     const navigate = useNavigate();
     const [hidePassword, setHidePassword] = useState(true);
-    const entityId = ENTITY_ID;
+    // No entity here any more. WHICH BOOK this customer is on is discovered by
+    // signInAcrossBooks() and stored on the session — see src/lib/signin.js.
+    // This screen used to carry `const entityId = "3002"`, never importing
+    // lib/entity at all, which is why every Micromart Fintech customer was
+    // refused regardless of what VITE_ENTITY_ID said.
     const [loggingIn, setLoggingIn] = useState(false);
     const [loginError, setLoginError] = useState("");
-    const isDesktop = useIsDesktop();
 
     useEffect(() => {
         // Simulating loading delay
@@ -76,58 +45,61 @@ const Login = ({ setUserSession, tenant }) => {
         setLoginError("");
         setLoggingIn(true);
         try {
-            const response = await fetch(
-                "https://micromartafrica.co.ke/MicromartAPI/Mobile/Application/Login",
-                {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                    body: JSON.stringify({
-                        AccountNumber: account,
-                        password: password,
-                        entityId: parseInt(entityId),
-                    }),
-                }
-            );
+            // Ask every Micromart book, not one. The result says which of them
+            // this customer belongs to — and refuses rather than guesses when
+            // the answer is "more than one".
+            const result = await signInAcrossBooks(account, password);
 
-            if (response.ok) {
-                const response_data = await response.json();
-
-                const dummySessionData = {
-                    userId: response_data.borrowerId,
-                    accountNumber: response_data.accountNo,
-                    name: response_data.firstName,
-                    fullname: response_data.firstName+' '+response_data.otherName,
-                    token: response_data.token,
-                    role: "borrower",
-                    expiry: Date.now() + 60 * 60 * 24000,
-                };
-            
-                // Save session data in localStorage
-                localStorage.setItem("session", JSON.stringify(dummySessionData));
-                setUserSession(dummySessionData); // Update state
-
-                setLoginError("");
+            if (result.kind === "ambiguous") {
+                setLoginError(
+                    `Your account exists on both ${result.names.join(" and ")}. `
+                    + `We cannot sign you in until that is corrected — please contact our office.`
+                );
                 setLoggingIn(false);
-            
-                // Redirect to Dashboard
-                navigate("/dashboard");
-            } else {
-                try {
-                    const errorData = await response.json();
-                    if (errorData) {
-                        setLoginError(errorData.message);
-                    } else {
-                        setLoginError("Login failed, invalid information provided.");
-                    }
-                } catch (parseError) {
-                    setLoginError("Login failed, try again.");
-                }
-                setLoggingIn(false);
-                ///console.error("Login failed");
-                ///alert(response.text() || "Login failed, Invalid credentials.");
+                return;
             }
+
+            if (result.kind === "unreachable") {
+                // NOT "no such account". Saying that to a real customer whose
+                // signal dropped invites them to register a second time, and a
+                // duplicate account is the thing all of this is cleaning up.
+                setLoginError("We could not reach Micromart just now. Please check your connection and try again.");
+                setLoggingIn(false);
+                return;
+            }
+
+            if (result.kind === "none") {
+                setLoginError(result.message || "Login failed, invalid information provided.");
+                setLoggingIn(false);
+                return;
+            }
+
+            const response_data = result.data;
+
+            const dummySessionData = {
+                userId: response_data.borrowerId,
+                accountNumber: response_data.accountNo,
+                name: response_data.firstName,
+                fullname: response_data.firstName+' '+response_data.otherName,
+                token: response_data.token,
+                role: "borrower",
+                // THE FIELD THAT MAKES ONE BUILD SERVE BOTH BOOKS. Every
+                // authenticated call reads it back through activeEntityId().
+                entityId: result.entityId,
+                expiry: Date.now() + 60 * 60 * 24000,
+            };
+
+            writeSession(dummySessionData);
+            // Before navigating: the screens that read their entity from the
+            // cached config must not still be holding the pre-login default.
+            setConfigurationEntity(result.entityId);
+            setUserSession(dummySessionData); // Update state
+
+            setLoginError("");
+            setLoggingIn(false);
+
+            // Redirect to Dashboard
+            navigate("/dashboard");
         } catch (error) {
             setLoggingIn(false);
             ///console.error("Login failed:", error);
@@ -144,8 +116,8 @@ const Login = ({ setUserSession, tenant }) => {
                         <div className="col-12 mb-auto pt-4" />
                         <div className="col-auto">
                             <img src="icon.png" alt="Service Suite Cloud" className="height-60 mb-3" />
-                            <p className="h6 mb-0">{(tenant?.name || '').toUpperCase()}</p>
-                            <p className="h3 mb-4">{tenant?.tagline || ''}</p>
+                            <p className="h6 mb-0">MICROMART AFRICA LTD</p>
+                            <p className="h3 mb-4">Exceeding The Incredible</p>
                             <div className="loader10 mb-2 mx-auto" />
                         </div>
                         <div className="col-12 mt-auto pb-4">
@@ -168,8 +140,8 @@ const Login = ({ setUserSession, tenant }) => {
                                             <img data-bs-img="light" src="icon.png" alt="Service Suite Cloud" /> 
                                             <img data-bs-img="dark" src="icon_light.png" alt="Service Suite Cloud" />
                                             <div>
-                                                <span className="h4">{tenant?.name || ''}</span>
-                                                <p className="company-tagline">{tenant?.tagline || ''}</p>
+                                                <span className="h4">Micromart <b>Africa</b> LTD</span>
+                                                <p className="company-tagline">Exceeding The Incredible</p>
                                             </div>
                                         </a>
                                         <div className="ms-auto" />
@@ -177,10 +149,6 @@ const Login = ({ setUserSession, tenant }) => {
                                     </div>
                                 </nav>
                             </header>
-                            {/* The band. Full-bleed under the brand bar — a card
-                                inset here would read as an advert rather than as
-                                the screen's own ground. */}
-                            {!isDesktop && <IntroSlider tenant={tenant} />}
                             <div className="h-100 py-3 px-3">
                                 <form onSubmit={handleSubmit} className="row h-100 align-items-center justify-content-center">
                                     <div className="col-11 col-sm-8 col-md-11 col-xl-11 col-xxl-10 login-box">
@@ -215,7 +183,7 @@ const Login = ({ setUserSession, tenant }) => {
                                             </div>
                                             <button type="submit" className="btn btn-lg btn-theme w-100 mb-4">Sign In</button>
                                             <div className="text-center mt-3">
-                                                Don't have account? <a href="/register">Create Account</a> here.
+                                                Don't have account? <a href={`${FINTECH_APP_ORIGIN}/welcome`}>Create Account</a> here.
                                             </div>
                                         </>}
                                     </div>
@@ -223,15 +191,13 @@ const Login = ({ setUserSession, tenant }) => {
                             </div>
                             <footer className="adminuiux-footer mt-auto">
                                 <div className="container-fluid text-center">
-                                    <span className="small">© {new Date().getFullYear()} {tenant?.name || ''} · Powered by Micro Eazy</span>
+                                    <span className="small">Copyright @2025, <a href="https://techcrast.co.ke" target="_blank">TechCrast Software Solutions LTD</a></span>
                                 </div>
                             </footer>
                         </div>
-                        {isDesktop && (
-                            <div className="col-12 col-md-6 col-xl-8 p-4">
-                                <IntroSlider tenant={tenant} />
-                            </div>
-                        )}
+                        <div className="col-12 col-md-6 col-xl-8 p-4 d-none d-md-block">
+                            <IntroSlider/>
+                        </div>
                     </div>
                 </div>
             </div>

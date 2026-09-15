@@ -1,6 +1,7 @@
 // Loan.jsx
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { activeEntityId } from '../lib/session';
 
 const Loan = ({logout}) => {
     const navigate = useNavigate();
@@ -26,8 +27,6 @@ const Loan = ({logout}) => {
         setLoading(true);
         setError(null);
         try {
-            const storedConfigurationData = localStorage.getItem('configuration');
-            const configurationDataJson = JSON.parse(storedConfigurationData);
             const session = localStorage.getItem("session");
             const sessionData = JSON.parse(session);
 
@@ -39,7 +38,7 @@ const Loan = ({logout}) => {
                 },
                 body: JSON.stringify({
                     ProductId:loanId,
-                    EntityId: parseInt(configurationDataJson.EntityId),
+                    EntityId: activeEntityId(),
                     AgentId: parseInt(sessionData.userId),
                     PhoneNumber:'',
                 }),
@@ -143,7 +142,7 @@ const Loan = ({logout}) => {
                 body: JSON.stringify({
                     Amount: stkAmount,
                     PhoneNumber: stkPhoneNumber,
-                    EntityId: 7
+                    EntityId: activeEntityId(),
                 }),
             });
             const data = await response.json();
