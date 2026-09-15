@@ -180,6 +180,51 @@ const LoanApplication = ({logout}) => {
         // eslint-disable-next-line
     }, [selectedLoanProduct, newLoanAmount]);
 
+    // ── THE TYPED AMOUNT ────────────────────────────────────────────────────
+    // A draft the customer edits freely, committed to newLoanAmount (which
+    // prices the loan) on blur, on Enter, or once typing pauses — never per
+    // keystroke, which would ask for a schedule at 1, 15, 150 and 1,500 on the
+    // way to 15,000.
+    const [amountDraft, setAmountDraft] = useState('');
+
+    useEffect(() => {
+        // Only a real amount flows back into the box: when an invalid entry
+        // clears newLoanAmount, the customer keeps seeing what they typed.
+        if (newLoanAmount) setAmountDraft(String(Math.round(Number(newLoanAmount))));
+    }, [newLoanAmount]);
+
+    const commitAmount = (raw) => {
+        if (!selectedLoanProduct) return;
+        const n = Math.round(Number(String(raw ?? '').replace(/[^\d]/g, '')));
+        const min = Number(selectedLoanProduct.MinPrincipal);
+        const max = Number(selectedLoanProduct.MaxPrincipal);
+        if (n && n === Number(newLoanAmount)) return;
+        setMinPrincipalWarning(!!n && n < min);
+        setMaxPrincipalWarning(n > max);
+        if (!n || n < min || n > max) {
+            // No amount is committed while the box holds an invalid one, so the
+            // schedule — and the Complete button under it — cannot describe a
+            // different loan from the one on screen.
+            setNewLoanSchedule(null);
+            setNewLoanAmount(null);
+            setValidationError(
+                !n ? "Enter loan amount..."
+                : n < min ? "Enter loan amount of at least Ksh " + min.toLocaleString('en-KE')
+                : "You can borrow up to Ksh " + max.toLocaleString('en-KE') + " on " + selectedLoanProduct.ProductName
+            );
+            return;
+        }
+        setValidationError("");
+        setNewLoanAmount(n);
+    };
+
+    useEffect(() => {
+        if (!selectedLoanProduct || !amountDraft || Number(amountDraft) === Number(newLoanAmount)) return;
+        const t = setTimeout(() => commitAmount(amountDraft), 800);
+        return () => clearTimeout(t);
+        // eslint-disable-next-line
+    }, [amountDraft]);
+
     const handleLoanAmountChange = (e) => {
         setMinPrincipalWarning(false);
         setMaxPrincipalWarning(false);
@@ -498,13 +543,23 @@ const LoanApplication = ({logout}) => {
                                 </div>
                             </div>
                             <div className="col">
-                                {newLoanAmount && (
-                                    <h5 className="text-theme-1 mb-1">
-                                        Ksh {parseFloat(newLoanAmount).toLocaleString('en-KE')}
-                                    </h5>
-                                )}
-                                {/* <h5 className="text-theme-1 mb-1">{selectedLoanProduct.ProductName}</h5> */}
-                                <p className="text-secondary">Loan Amount</p>
+                                {/* Typed, not only dragged: the slider moves in 500s from
+                                    the product minimum, so most exact amounts (15,000 on a
+                                    product starting at 10,901) were unreachable. */}
+                                <div className="input-group" style={{ maxWidth: 260 }}>
+                                    <span className="input-group-text">Ksh</span>
+                                    <input
+                                        type="text"
+                                        inputMode="numeric"
+                                        className={`form-control ${minPrincipalWarning || maxPrincipalWarning ? 'is-invalid' : ''}`}
+                                        aria-label="Loan amount"
+                                        value={amountDraft}
+                                        onChange={(e) => setAmountDraft(e.target.value.replace(/[^\d]/g, ''))}
+                                        onBlur={() => commitAmount(amountDraft)}
+                                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); commitAmount(amountDraft); } }}
+                                    />
+                                </div>
+                                <p className="text-secondary mb-0 mt-1">Loan Amount — type it or use the slider</p>
                             </div>
                             <div className='col-md-7'>
                                 <div className='bg-light p-2 rounded mt-3 mt-md-0 mb-3 mb-md-0'>
@@ -523,7 +578,7 @@ const LoanApplication = ({logout}) => {
                                             min={selectedLoanProduct.MinPrincipal}
                                             max={selectedLoanProduct.MaxPrincipal}
                                             step="500"
-                                            value={newLoanAmount}
+                                            value={newLoanAmount ?? selectedLoanProduct.MinPrincipal}
                                             onChange={(e) => {
                                                 setNewLoanAmount(e.target.value);
                                                 handleLoanAmountChange(e);

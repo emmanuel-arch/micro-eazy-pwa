@@ -7,6 +7,7 @@ import IntroSlider from '../components/IntroSlider';
 import OnboardingID from './segments/OnboardingID';
 import Terms from './Terms';
 import { REGISTRATION_ENTITY_ID } from '../lib/entity';
+import { setConfigurationEntity } from '../lib/session';
 
 interface RegisterFormData {
     firstName: string;
@@ -1214,11 +1215,15 @@ const Register = ({ setUserSession }) => {
                             name: data.firstName,
                             token: response_data.token,
                             role: "borrower",
+                            // The book the account was just opened on. Without it
+                            // every later call fell back to DEFAULT_ENTITY_ID.
+                            entityId: REGISTRATION_ENTITY_ID,
                             expiry: Date.now() + 60 * 60 * 24000,
                         };
-                    
+
                         // Save session data in localStorage
                         localStorage.setItem("session", JSON.stringify(dummySessionData));
+                        setConfigurationEntity(REGISTRATION_ENTITY_ID);
                         setUserSession(dummySessionData); // Update state
                         setLoggingIn(false);
                     

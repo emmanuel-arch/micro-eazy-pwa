@@ -18,21 +18,22 @@
 // and carried their own `const entityId = "3002"`. Correcting the number would
 // not have fixed anything; the shape had to change.
 //
-// ── THE RULE ────────────────────────────────────────────────────────────────
-// Look the customer up across every book this app serves, then:
-//
-//   in BOTH books   → refuse, and say to contact admin. Two records for one
-//                     person is a data fault; guessing which to open shows
-//                     somebody a balance that may not be theirs.
-//   in ONE book     → scope the whole session to that book. Every later call
-//                     carries it.
-//   in NEITHER      → offer registration.
+// ── THE RULE (since 15 Sep 2026 this app is Micromart FINTECH only) ─────────
+//   signs in on a SERVED book (3005)       → scope the session to it.
+//   signs in on a REFERRED book (3002)     → no session; "contact customer
+//                                            support" on SUPPORT_PHONE.
+//   signs in on neither                    → the credentials were refused; the
+//                                            customer is offered registration
+//                                            on 3005 (the API cannot say which
+//                                            of "no account" and "wrong
+//                                            password" it was).
 //
 // The lookup needs the network, so it lives in ./signin.js. This file only says
 // which books exist and which to assume before we know.
 //
-// ── THREE ENTITIES THAT ARE NOT THE SAME THING ──────────────────────────────
-//   MICROMART_ENTITIES      the books to search at sign-in
+// ── THE ENTITIES, WHICH ARE NOT THE SAME THING ──────────────────────────────
+//   MICROMART_ENTITIES      the books this app serves (searched at sign-in)
+//   REFERRED_ENTITIES       books recognised at sign-in only to refer to support
 //   DEFAULT_ENTITY_ID       the book to assume BEFORE sign-in — branding, the
 //                           splash, anything drawn before we know who is holding
 //                           the phone
@@ -55,17 +56,28 @@ function parseEntityList(raw, fallback) {
 }
 
 /**
- * The books this app serves, in the order they are searched.
+ * The books this app SERVES — customers here sign in, see the shelf and apply.
  *
- *   3002 — MICROMART AFRICA LTD  (the SME / field book)
- *   3005 — MICROMART FINTECH     (the app book — Micro Eazy products live here)
+ *   3005 — MICROMART FINTECH  (the only book this app serves, since 15 Sep 2026)
  *
- * 3003 is Micromart Check off and 3004 Micromart IPF (verified against BsEntity,
- * 8 Sep 2026 — an older comment here called 3003 "Axe Boresha", which is wrong).
- * Neither is served by this app today; adding one is an entry in VITE_ENTITY_IDS
- * and nothing else.
+ * 3002 is Micromart Africa (the SME / field book), 3003 Micromart Check off and
+ * 3004 Micromart IPF (verified against BsEntity, 8 Sep 2026). None of them is
+ * served here: the app is Fintech-only, and its 3005 products all route to
+ * ServiceSuite workflow 1022 ("Micro Eazy": Risk → Customer Service).
  */
-export const MICROMART_ENTITIES = parseEntityList(import.meta.env.VITE_ENTITY_IDS, [3002, 3005]);
+export const MICROMART_ENTITIES = parseEntityList(import.meta.env.VITE_ENTITY_IDS, [3005]);
+
+/**
+ * Books whose customers are RECOGNISED but not served: a working sign-in on one
+ * of these is answered with "contact customer support", never a session and
+ * never "create an account" — a Micromart Africa customer opening a second
+ * account on Fintech is a duplicate somebody has to merge by hand.
+ */
+export const REFERRED_ENTITIES = parseEntityList(import.meta.env.VITE_REFERRED_ENTITY_IDS, [3002])
+  .filter((id) => !MICROMART_ENTITIES.includes(id));
+
+/** Micromart customer support, as the app tells a customer it cannot serve. */
+export const SUPPORT_PHONE = import.meta.env.VITE_SUPPORT_PHONE || "0740961275";
 
 /**
  * The book assumed before a customer has identified themselves.
@@ -90,19 +102,6 @@ export const DEFAULT_ENTITY_ID =
  */
 export const REGISTRATION_ENTITY_ID =
   Number(import.meta.env.VITE_REGISTRATION_ENTITY_ID) || 3005;
-
-/**
- * Where a NEW customer opens an account: the Micro Eazy app.
- *
- * Self-service registration only ever created customers on 3005, and the
- * fintech book's front door is Micro Eazy — its onboarding runs the ID check,
- * the dual-book precheck and the identity lock that this app's form skips. This
- * app (portal.servicesuitecloud.com) signs EXISTING customers of either book in;
- * every road to a new Fintech account leads to microeazy.servicesuitecloud.com.
- */
-export const FINTECH_APP_ORIGIN = (
-  import.meta.env.VITE_FINTECH_APP_ORIGIN || "https://microeazy.servicesuitecloud.com"
-).replace(/\/$/, "");
 
 /** Human label, for anything a customer or an admin will read. */
 export function entityName(id) {

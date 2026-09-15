@@ -4,7 +4,7 @@ import { Swiper, SwiperSlide } from "swiper/react";
 import IntroSlider from '../components/IntroSlider';
 import { signInAcrossBooks } from "../lib/signin";
 import { writeSession, setConfigurationEntity } from "../lib/session";
-import { FINTECH_APP_ORIGIN } from "../lib/entity";
+import { SUPPORT_PHONE } from "../lib/entity";
 
 const Login = ({ setUserSession }) => {
     const [isLoading, setIsLoading] = useState(true);
@@ -53,7 +53,7 @@ const Login = ({ setUserSession }) => {
             if (result.kind === "ambiguous") {
                 setLoginError(
                     `Your account exists on both ${result.names.join(" and ")}. `
-                    + `We cannot sign you in until that is corrected — please contact our office.`
+                    + `We cannot sign you in until that is corrected — please contact customer support on ${SUPPORT_PHONE}.`
                 );
                 setLoggingIn(false);
                 return;
@@ -68,8 +68,26 @@ const Login = ({ setUserSession }) => {
                 return;
             }
 
+            if (result.kind === "referred") {
+                // A real customer of a book this app does not serve (Micromart
+                // Africa). No session, and never "create an account" — that
+                // would open a duplicate on Fintech.
+                setLoginError(
+                    `Your account is with ${result.name}, which this app does not serve. `
+                    + `Please contact Micromart customer support on ${SUPPORT_PHONE}.`
+                );
+                setLoggingIn(false);
+                return;
+            }
+
             if (result.kind === "none") {
-                setLoginError(result.message || "Login failed, invalid information provided.");
+                // Micromart's API says "Invalid account number or password" for
+                // both a wrong password and an account that does not exist, so
+                // the customer is given both roads.
+                setLoginError(
+                    `${result.message || "Invalid account number or password."} `
+                    + `If you do not have a Micromart Fintech account yet, create one below.`
+                );
                 setLoggingIn(false);
                 return;
             }
@@ -183,7 +201,7 @@ const Login = ({ setUserSession }) => {
                                             </div>
                                             <button type="submit" className="btn btn-lg btn-theme w-100 mb-4">Sign In</button>
                                             <div className="text-center mt-3">
-                                                Don't have account? <a href={`${FINTECH_APP_ORIGIN}/welcome`}>Create Account</a> here.
+                                                Don't have account? <Link to="/register">Create Account</Link> here.
                                             </div>
                                         </>}
                                     </div>

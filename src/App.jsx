@@ -4,20 +4,15 @@ import PrivateRoute from "./components/PrivateRoute";
 import { onMessage } from 'firebase/messaging';
 import { messaging } from './firebase';
 import DownloadButton from "./components/DownloadButton";
-import { DEFAULT_ENTITY_ID, FINTECH_APP_ORIGIN } from "./lib/entity";
+import { DEFAULT_ENTITY_ID } from "./lib/entity";
 import { readSession } from "./lib/session";
-
-/** A route that belongs to another app: hand the browser over, don't render. */
-const LeaveFor = ({ href }) => {
-  useEffect(() => { window.location.replace(href); }, [href]);
-  return null;
-};
 
 import Header from './components/Header';
 import Footer from './components/Footer';
 import SideBar from './components/SideBar';
 import Login from './pages/Login';
 import Password from './pages/Password';
+import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import Loans from './pages/Loans';
 import Ledger from './pages/Ledger';
@@ -202,8 +197,8 @@ const App = () => {
         <Routes>
           <Route path="/" element={<Login setUserSession={setUserSession} />} />
           <Route path="/password" element={<Password setUserSession={setUserSession} />} />
-          {/* New accounts open on the Micro Eazy app — see FINTECH_APP_ORIGIN. */}
-          <Route path="/register" element={<LeaveFor href={`${FINTECH_APP_ORIGIN}/welcome`} />} />
+          {/* New accounts open HERE, starting at the ID scan, on Micromart Fintech (3005). */}
+          <Route path="/register" element={<Register setUserSession={setUserSession} />} />
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       )}

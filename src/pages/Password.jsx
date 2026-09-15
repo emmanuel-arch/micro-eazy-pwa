@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Swiper, SwiperSlide } from "swiper/react";
 import IntroSlider from '../components/IntroSlider';
 import { resetPasswordAcrossBooks } from "../lib/signin";
+import { SUPPORT_PHONE } from "../lib/entity";
 
 const Password = ({ setUserSession }) => {
     const [isLoading, setIsLoading] = useState(true);
@@ -57,7 +58,7 @@ const Password = ({ setUserSession }) => {
             setResetError(
                 result.kind === "unreachable"
                     ? "We could not reach Micromart just now. Please check your connection and try again."
-                    : "We could not find that account number. Please check it and try again."
+                    : `We could not find a Micromart Fintech account for that number. Please check it, create an account, or contact customer support on ${SUPPORT_PHONE}.`
             );
             setLoggingIn(false);
         } catch {

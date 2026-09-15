@@ -28,7 +28,7 @@
 //                them to register a second time, and a duplicate account is
 //                exactly what the rest of this work exists to clean up.
 // ─────────────────────────────────────────────────────────────────────────────
-import { MICROMART_ENTITIES, entityName } from "./entity";
+import { MICROMART_ENTITIES, REFERRED_ENTITIES, entityName } from "./entity";
 
 const API = "https://micromartafrica.co.ke/MicromartAPI/Mobile/Application";
 
@@ -69,9 +69,18 @@ async function attemptLogin(account, password, entityId) {
 }
 
 /**
- * Sign in across every book this app serves.
+ * Sign in on the book(s) this app serves; if refused, recognise a customer of a
+ * REFERRED book so they are sent to support rather than told to register.
+ *
+ * The referred probe only ever answers "this is somebody else's customer": its
+ * token is discarded, never stored, and no screen opens on that book. A 3002
+ * customer who mistypes their password is refused by both books and so lands on
+ * "none" — the API returns the same "Invalid account number or password" for a
+ * missing account and a wrong password, so the two cannot be told apart here.
+ *
  * @returns {Promise<{kind:"ok",entityId:number,data:object}
  *                 | {kind:"ambiguous",entityIds:number[],names:string[]}
+ *                 | {kind:"referred",entityId:number,name:string}
  *                 | {kind:"none",message:string}
  *                 | {kind:"unreachable"}>}
  */
@@ -91,7 +100,15 @@ export async function signInAcrossBooks(account, password) {
     return { kind: "ambiguous", entityIds, names: entityIds.map(entityName) };
   }
 
-  // Nothing matched. Was that an answer, or was it silence?
+  const referred = await Promise.all(
+    REFERRED_ENTITIES.map((entityId) => attemptLogin(account, password, entityId)),
+  );
+  const known = referred.find((r) => r.ok);
+  if (known) return { kind: "referred", entityId: known.entityId, name: entityName(known.entityId) };
+
+  // Nothing matched on the served book. Was that an answer, or was it silence?
+  // Only the SERVED book's reachability counts: a referred book being down must
+  // not turn a real refusal into "could not reach".
   if (!results.some((r) => r.reachable)) return { kind: "unreachable" };
 
   const message = results.find((r) => r.message)?.message ?? "";
