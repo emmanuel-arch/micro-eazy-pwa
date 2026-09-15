@@ -9,6 +9,7 @@ import Terms from './Terms';
 import { REGISTRATION_ENTITY_ID, SUPPORT_PHONE } from '../lib/entity';
 import { setConfigurationEntity } from '../lib/session';
 import { lookupBook } from '../lib/signin';
+import { readKenyanId } from '../lib/idOcr';
 
 interface RegisterFormData {
     firstName: string;
@@ -1021,9 +1022,10 @@ const Register = ({ setUserSession }) => {
 
                 const data = await response.json();
 
-                if (!validateIdResponse(data)) {
+                const unread = validateIdResponse(data);
+                if (unread) {
                     setIsUploading(false);
-                    setOnboardingError('Invalid ID data detected, Upload a valid national ID with all information clearly visible.');
+                    setOnboardingError(`We could not read your ${unread} from the ID. Upload a clear, well-lit photo of the front of your national ID with all details visible.`);
                     return;
                 }
 
@@ -1064,66 +1066,24 @@ const Register = ({ setUserSession }) => {
         }
     };
 
-    function validateIdResponse(data) {
-        if (!data || !data.idInfo) return false;
+    /**
+     * Fill and lock the ID fields from Micromart's OCR reply. Returns null when
+     * every field was read, otherwise the fields it could not read, for the
+     * message. Parsing lives in src/lib/idOcr.js: it reads the older green ID
+     * (one FULL NAMES line — Micromart's idInfo.surname is always null for it,
+     * which rejected every such card) as well as the newer one.
+     */
+    function validateIdResponse(data): string | null {
+        const id = readKenyanId(data);
+        if (!id.ok) return id.missing.join(", ");
 
-        const { idNumber, surname, givenNames, sex, dateOfBirth } = data.idInfo;
-        const locked: string[] = [];
-
-        if (
-            !idNumber || typeof idNumber !== 'string' || !/^\d{7,10}$/.test(idNumber.trim())
-        ){
-            return false;
-        }else{
-            console.log("ID Number:", idNumber);
-            setValue("nationalID", idNumber || "");
-            locked.push("nationalID");
-        }
-
-        if (!surname || typeof surname !== 'string' || surname.trim().length === 0){
-            return false;
-        }else{
-            setValue("firstName", surname || "");
-            console.log("First Name:", surname);
-            locked.push("firstName");
-        }
-
-        if (!givenNames || typeof givenNames !== 'string' || givenNames.trim().length === 0){
-            return false;
-        }else{
-            setValue("otherName", givenNames || "");
-            console.log("Other Name:", givenNames);
-            locked.push("otherName");
-        }
-
-        if (
-            !sex ||
-            typeof sex !== 'string' ||
-            !['MALE', 'FEMALE'].includes(sex.trim().toUpperCase())
-        ){
-            return false;
-        }else{
-            setValue("gender", sex.trim().toLowerCase() || "");
-            console.log("Gender:", sex);
-            locked.push("gender");
-        }
-
-        if (!dateOfBirth || !isValidDate(dateOfBirth.trim())){
-            return false;
-        }else{
-            console.log("DOB:", dateOfBirth);
-            const parts = dateOfBirth.trim().split(/[.\-\/]/);
-            const [day, month, year] = parts.map(Number);
-            const date = new Date(year, month - 1, day);
-            const yyyy = date.getFullYear();
-            const mm = String(date.getMonth() + 1).padStart(2, '0');
-            const dd = String(date.getDate()).padStart(2, '0');
-            setValue("dob", `${yyyy}-${mm}-${dd}`);
-            locked.push("dob");
-        }
-
-        setOcrLockedFields(locked);
-        return true;
+        setValue("nationalID", id.idNumber);
+        setValue("firstName", id.firstName);
+        setValue("otherName", id.otherName);
+        setValue("gender", id.sex);
+        setValue("dob", id.dob);
+        setOcrLockedFields(["nationalID", "firstName", "otherName", "gender", "dob"]);
+        return null;
     }
 
     // Helper to check valid date format (dd.mm.yyyy or yyyy-mm-dd, etc)
